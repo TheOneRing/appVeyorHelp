@@ -35,7 +35,8 @@ function CmakeImageInstall([string] $destDir)
     }
     Write-Host "move $destDir\$prefix to $destDir"
     mv "$destDir\$prefix\*" "$destDir"
-    $rootLeftOver = $prefix.substring(0, $prefix.indexOf("\\"))
+    Write-Host "prefix", $prefix
+    $rootLeftOver = $prefix.substring(0, $prefix.indexOf("\"))
     Write-Host "rm $destDir\$rootLeftOver"
     rm -Recurse "$destDir\$rootLeftOver"
 }
