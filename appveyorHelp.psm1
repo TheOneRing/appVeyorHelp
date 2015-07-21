@@ -20,7 +20,7 @@ function BAT-CALL([string] $path, [string] $arg)
     }
 }
 
-function CMAKE-IMAGE-INSTALL([string] $destDir)
+function CmakeImageInstall([string] $destDir)
 {
     $destDir=$destDir -replace "/", "\\"
     Write-Host "tCmakeInstall", $destDir
@@ -59,7 +59,7 @@ function SETUP-QT()
     }
 }
 
-function INIT([string[]] $modules)
+function Init([string[]] $modules)
 {
     SETUP-QT
     mkdir $env:APPVEYOR_BUILD_FOLDER\work\image
@@ -92,4 +92,4 @@ function INIT([string[]] $modules)
     }
 }
 
-Export-ModuleMember -Function @("INIT","CMAKE-IMAGE-INSTALL") -Variable @("CMAKE_INSTALL_ROOT")
+Export-ModuleMember -Function @("Init","CmakeImageInstall") -Variable @("CMAKE_INSTALL_ROOT")
