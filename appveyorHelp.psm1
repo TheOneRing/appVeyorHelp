@@ -1,3 +1,4 @@
+$ErrorActionPreference="Stop"
 $script:MAKE=""
 $script:CMAKE_GENERATOR=""
 
@@ -10,7 +11,7 @@ $env:PATH="$env:PATH;$script:INSTALL_DIR"
 function BAT-CALL([string] $path, [string] $arg)
 {
     Write-Host "Calling `"$path`" `"$arg`""
-    cmd /c  "$path" "$arg" `& set |
+    cmd /c  "$path" "$arg" `&`& set `|`| exit 1|
     foreach {
       if ($_ -match "=") {
         $v = $_.split("=")
@@ -18,15 +19,20 @@ function BAT-CALL([string] $path, [string] $arg)
         set-item -force -path "ENV:\$($v[0])"  -value "$($v[1])"
       }
     }
+    if($LastExitCode -eq 1) {
+        Write-Error "$path not found."
+    }
 }
 
 function CmakeImageInstall([string] $destDir)
 {
     $destDir=$destDir -replace "/", "\\"
-    Write-Host "tCmakeInstall", $destDir
-    Write-Host "make", $script:MAKE
     $env:DESTDIR=$destDir
     & $script:MAKE install
+    if(!$LastExitCode -eq 0)
+    {
+        Write-Error "Build Failed"
+    }
     $env:DESTDIR=$null
     $prefix=$script:INSTALL_DIR
     if( $prefix.substring(1,1) -eq ":")
@@ -63,8 +69,8 @@ function SETUP-QT()
 function Init([string[]] $modules)
 {
     SETUP-QT
-    mkdir $env:APPVEYOR_BUILD_FOLDER\work\image
-    mkdir $env:APPVEYOR_BUILD_FOLDER\work\build
+    mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\image
+    mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\build
     
     if($modules -contains "ninja") {
         $script:CMAKE_GENERATOR="Ninja"
@@ -74,21 +80,25 @@ function Init([string[]] $modules)
     
     if ( !(Test-Path "$env:APPVEYOR_BUILD_FOLDER\work\install" ) )
     {
-        mkdir $env:APPVEYOR_BUILD_FOLDER\work\install
-        mkdir $env:APPVEYOR_BUILD_FOLDER\work\git
+        mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\install
+        mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\git
         
         if($modules -contains "ninja") {
             cinst ninja
         }
         
         if($modules -contains "extra-cmake-modules") {
-            mkdir $env:APPVEYOR_BUILD_FOLDER\work\build\extra-cmake-modules
+            mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\build\extra-cmake-modules
             cd $env:APPVEYOR_BUILD_FOLDER\work\git
             git clone -q git://anongit.kde.org/extra-cmake-modules.git
             
             cd $env:APPVEYOR_BUILD_FOLDER\work\build\extra-cmake-modules
             cmake -G $script:CMAKE_GENERATOR $env:APPVEYOR_BUILD_FOLDER\work\git\extra-cmake-modules -DCMAKE_INSTALL_PREFIX="$CMAKE_INSTALL_ROOT"
             & $script:MAKE install
+            if(!$LastExitCode -eq 0)
+            {
+                Write-Error "Build of extra-cmake-modules Failed"
+            }
         }
     }
 }
