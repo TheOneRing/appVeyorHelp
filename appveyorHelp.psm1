@@ -97,7 +97,7 @@ function Init([string[]] $modules)
                 {
                     Write-Error "Build of extra-cmake-modules Failed"
                 }
-                break
+                continue
             }
             cinst $module
         }
