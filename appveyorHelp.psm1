@@ -128,7 +128,9 @@ function SetupSnoreSend([string] $snorePath, [hashtable] $values)
 
 function SendSnoreNotification([string] $title, [string] $message)
 {
-    & $script:SnorePath\snore-send.exe -t $title -m $message
+    $env:LIBSNORE_LOG_TO_FILE=1
+    & $script:SnorePath\snore-send.exe -t $title -m $message |Write-Host
+    $env:LIBSNORE_LOG_TO_FILE=0
 }
 
 Export-ModuleMember -Function @("Init","CmakeImageInstall", "SetupSnoreSend", "SendSnoreNotification", "LogExec") -Variable @("CMAKE_INSTALL_ROOT")
