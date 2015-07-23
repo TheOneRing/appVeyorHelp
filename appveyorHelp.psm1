@@ -129,7 +129,9 @@ function SetupSnoreSend([string] $snorePath, [hashtable] $values)
 function SendSnoreNotification([string] $title, [string] $message)
 {
     $env:LIBSNORE_LOG_TO_FILE=1
+    $env:LIBSNORE_DEBUG_LVL=3
     & $script:SnorePath\snore-send.exe -t $title -m $message |Write-Host
+    $env:LIBSNORE_DEBUG_LVL=3
     $env:LIBSNORE_LOG_TO_FILE=0
 }
 
