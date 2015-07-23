@@ -3,7 +3,8 @@ $script:MAKE=""
 $script:CMAKE_GENERATOR=""
 
 $script:INSTALL_DIR="$env:APPVEYOR_BUILD_FOLDER\work\install"
-$CMAKE_INSTALL_ROOT=$INSTALL_DIR -replace "\\", "/"
+$CMAKE_INSTALL_ROOT="`"$INSTALL_DIR`"" -replace "\\", "/"
+Write-Host "CMAKE_INSTALL_ROOT = $CMAKE_INSTALL_ROOT"
 $env:PATH="$env:PATH;$script:INSTALL_DIR"
 
 #Set environment variables for Visual Studio Command Prompt
@@ -24,12 +25,26 @@ function BAT-CALL([string] $path, [string] $arg)
     }
 }
 
+function LogExec()
+{
+    $OldErrorActionPreference=$ErrorActionPreference
+    $ErrorActionPreference="Continue"
+    $LastExitCode = 0
+    Write-Host $Args
+    & $Args[0] $Args[1..$Args.Count]
+    if(!$LastExitCode -eq 0)
+    {
+        exit $LastExitCode
+    }
+    $ErrorActionPreference=$OldErrorActionPreference
+}
+
 function CmakeImageInstall([string] $destDir)
 {
     rm -Recurse "$destDir"
     $destDir=$destDir -replace "/", "\\"
     $env:DESTDIR=$destDir
-    & $script:MAKE install
+    LogExec $script:MAKE install
     if(!$LastExitCode -eq 0)
     {
         Write-Error "Build Failed"
@@ -88,18 +103,13 @@ function Init([string[]] $modules)
             if($module -eq "extra-cmake-modules") {
                 mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\build\extra-cmake-modules
                 cd $env:APPVEYOR_BUILD_FOLDER\work\git
-                git clone -q git://anongit.kde.org/extra-cmake-modules.git
-                
+                LogExec git clone -q git://anongit.kde.org/extra-cmake-modules.git                
                 cd $env:APPVEYOR_BUILD_FOLDER\work\build\extra-cmake-modules
-                cmake -G $script:CMAKE_GENERATOR $env:APPVEYOR_BUILD_FOLDER\work\git\extra-cmake-modules -DCMAKE_INSTALL_PREFIX="$CMAKE_INSTALL_ROOT"
-                & $script:MAKE install
-                if(!$LastExitCode -eq 0)
-                {
-                    Write-Error "Build of extra-cmake-modules Failed"
-                }
+                LogExec cmake -G $script:CMAKE_GENERATOR $env:APPVEYOR_BUILD_FOLDER\work\git\extra-cmake-modules -DCMAKE_INSTALL_PREFIX="$CMAKE_INSTALL_ROOT"
+                LogExec  $script:MAKE install
                 continue
             }
-            cinst $module
+            cinst $module -y
         }
 
     }
@@ -111,7 +121,7 @@ function SetupSnoreSend([string] $snorePath, [hashtable] $values)
     foreach($group in $values.Keys)
     {
         foreach($key in $values[$group].Keys){
-            & $script:SnorePath\snoresettings.exe  -a $group  $key  $values[$group][$key] | Write-Host
+            & $script:SnorePath\snoresettings.exe  -a $group  $key  $values[$group][$key]
         }
     }
 }
@@ -121,4 +131,4 @@ function SendSnoreNotification([string] $title, [string] $message)
     & $script:SnorePath\snore-send.exe -t $title -m $message
 }
 
-Export-ModuleMember -Function @("Init","CmakeImageInstall", "SetupSnoreSend", "SendSnoreNotification") -Variable @("CMAKE_INSTALL_ROOT")
+Export-ModuleMember -Function @("Init","CmakeImageInstall", "SetupSnoreSend", "SendSnoreNotification", "LogExec") -Variable @("CMAKE_INSTALL_ROOT")
