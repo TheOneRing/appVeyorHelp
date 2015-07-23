@@ -26,6 +26,7 @@ function BAT-CALL([string] $path, [string] $arg)
 
 function CmakeImageInstall([string] $destDir)
 {
+    rm -Recurse "$destDir"
     $destDir=$destDir -replace "/", "\\"
     $env:DESTDIR=$destDir
     & $script:MAKE install
@@ -40,7 +41,7 @@ function CmakeImageInstall([string] $destDir)
         $prefix=$prefix.substring(3)
     }
     Write-Host "move $destDir\$prefix to $destDir"
-    mv "$destDir\$prefix\*" "$destDir"
+    mv -Force "$destDir\$prefix\*" "$destDir"
     Write-Host "prefix", $prefix
     $rootLeftOver = $prefix.substring(0, $prefix.indexOf("\"))
     Write-Host "rm $destDir\$rootLeftOver"
@@ -104,20 +105,20 @@ function Init([string[]] $modules)
     }
 }
 
-function SetupSnoreSend([string] $snoreSend, [hashtable] $values)
+function SetupSnoreSend([string] $snorePath, [hashtable] $values)
 {
-    $script:SnoreSend = $snoreSend
+    $script:SnorePath = $snorePath
     foreach($group in $values.Keys)
     {
         foreach($key in $values[$group].Keys){
-            & snoresettings  -a $group  $key  $values[$group][$key] | Write-Host
+            & $script:SnorePath\snoresettings.exe  -a $group  $key  $values[$group][$key] | Write-Host
         }
     }
 }
 
 function SendSnoreNotification([string] $title, [string] $message)
 {
-    & $script:SnoreSend -t $title -m $message
+    & $script:SnorePath\snore-send.exe -t $title -m $message
 }
 
 Export-ModuleMember -Function @("Init","CmakeImageInstall", "SetupSnoreSend", "SendSnoreNotification") -Variable @("CMAKE_INSTALL_ROOT")
