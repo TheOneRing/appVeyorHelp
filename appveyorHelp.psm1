@@ -83,24 +83,41 @@ function Init([string[]] $modules)
         mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\install
         mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\git
         
-        if($modules -contains "ninja") {
-            cinst ninja
-        }
-        
-        if($modules -contains "extra-cmake-modules") {
-            mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\build\extra-cmake-modules
-            cd $env:APPVEYOR_BUILD_FOLDER\work\git
-            git clone -q git://anongit.kde.org/extra-cmake-modules.git
-            
-            cd $env:APPVEYOR_BUILD_FOLDER\work\build\extra-cmake-modules
-            cmake -G $script:CMAKE_GENERATOR $env:APPVEYOR_BUILD_FOLDER\work\git\extra-cmake-modules -DCMAKE_INSTALL_PREFIX="$CMAKE_INSTALL_ROOT"
-            & $script:MAKE install
-            if(!$LastExitCode -eq 0)
-            {
-                Write-Error "Build of extra-cmake-modules Failed"
+        foreach($module in $modules) {
+            if($module -eq "extra-cmake-modules") {
+                mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\build\extra-cmake-modules
+                cd $env:APPVEYOR_BUILD_FOLDER\work\git
+                git clone -q git://anongit.kde.org/extra-cmake-modules.git
+                
+                cd $env:APPVEYOR_BUILD_FOLDER\work\build\extra-cmake-modules
+                cmake -G $script:CMAKE_GENERATOR $env:APPVEYOR_BUILD_FOLDER\work\git\extra-cmake-modules -DCMAKE_INSTALL_PREFIX="$CMAKE_INSTALL_ROOT"
+                & $script:MAKE install
+                if(!$LastExitCode -eq 0)
+                {
+                    Write-Error "Build of extra-cmake-modules Failed"
+                }
+                break
             }
+            cinst $module
+        }
+
+    }
+}
+
+function SetupSnoreSend([string] $snoreSend, [hashtable] $values)
+{
+    $script:SnoreSend = $snoreSend
+    foreach($group in $values.Keys)
+    {
+        foreach($key in $values[$group].Keys){
+            & snoresettings  -a $group  $key  $values[$group][$key] | Write-Host
         }
     }
 }
 
-Export-ModuleMember -Function @("Init","CmakeImageInstall") -Variable @("CMAKE_INSTALL_ROOT")
+function SendSnoreNotification([string] $title, [string] $message)
+{
+    & $script:SnoreSend -t $title -m $message
+}
+
+Export-ModuleMember -Function @("Init","CmakeImageInstall", "SetupSnoreSend", "SendSnoreNotification") -Variable @("CMAKE_INSTALL_ROOT")
