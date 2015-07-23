@@ -118,6 +118,8 @@ function Init([string[]] $modules)
 function SetupSnoreSend([string] $snorePath, [hashtable] $values)
 {
     $script:SnorePath = $snorePath
+    #init snore-send
+    & $script:SnorePath\snore-send.exe
     foreach($group in $values.Keys)
     {
         foreach($key in $values[$group].Keys){
@@ -129,9 +131,7 @@ function SetupSnoreSend([string] $snorePath, [hashtable] $values)
 function SendSnoreNotification([string] $title, [string] $message)
 {
     $env:LIBSNORE_LOG_TO_FILE=1
-    $env:LIBSNORE_DEBUG_LVL=3
     & $script:SnorePath\snore-send.exe -t $title -m $message |Write-Host
-    $env:LIBSNORE_DEBUG_LVL=3
     $env:LIBSNORE_LOG_TO_FILE=0
 }
 
