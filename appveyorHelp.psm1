@@ -87,6 +87,7 @@ function Init([string[]] $modules)
     SETUP-QT
     mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\image
     mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\build
+    mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\log
     
     if($modules -contains "ninja") {
         $script:CMAKE_GENERATOR="Ninja"
@@ -119,6 +120,7 @@ function SetupSnoreSend([string] $snorePath, [hashtable] $values)
 {
     $script:SnorePath = $snorePath
     #init snore-send
+    $env:LIBSNORE_LOGFILE=$env:APPVEYOR_BUILD_FOLDER\work\log\init-snore-send.log
     & $script:SnorePath\snore-send.exe
     foreach($group in $values.Keys)
     {
@@ -131,6 +133,7 @@ function SetupSnoreSend([string] $snorePath, [hashtable] $values)
 function SendSnoreNotification([string] $title, [string] $message)
 {
     $env:LIBSNORE_LOG_TO_FILE=1
+    $env:LIBSNORE_LOGFILE=$env:APPVEYOR_BUILD_FOLDER\work\log\snore-send.log
     & $script:SnorePath\snore-send.exe -t $title -m $message |Write-Host
     $env:LIBSNORE_LOG_TO_FILE=0
 }
