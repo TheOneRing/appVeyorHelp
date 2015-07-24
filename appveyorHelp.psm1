@@ -65,18 +65,23 @@ function CmakeImageInstall([string] $destDir)
 
 function SETUP-QT()
 {
-    if ( $env:COMPILER -eq "MINGW" )
+    [string] $compiler=$env:COMPILER 
+    BAT-CALL "C:\Qt\5.5\$compiler\bin\qtenv2.bat"
+    if ($compiler.StartsWith("mingw"))
     {
-        BAT-CALL "C:\Qt\5.5\mingw492_32\bin\qtenv2.bat"
         #remove sh.exe from path
         $env:PATH=$env:PATH -replace "C:\\Program Files \(x86\)\\Git\\bin", ""
         $script:MAKE="mingw32-make"
         $script:CMAKE_GENERATOR="MinGW Makefiles"
     }
-    elseif ( $env:COMPILER -eq "MSVC" )
+    elseif ($compiler.StartsWith("msvc"))
     {
-        BAT-CALL "C:\Qt\5.5\msvc2013_64\bin\qtenv2.bat"
-        BAT-CALL "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall.bat" amd64
+        $arch = "x86"
+        if($compiler.EndsWith("64"))
+        {
+            $arch = "amd64"
+        }
+        BAT-CALL "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall.bat" $arch
         $script:MAKE="nmake"
         $script:CMAKE_GENERATOR="NMake Makefiles"
     }
@@ -136,12 +141,16 @@ function SendSnoreNotification([string] $title, [string] $message)
 {
     $env:LIBSNORE_LOG_TO_FILE=1
     $env:LIBSNORE_LOGFILE="$env:APPVEYOR_BUILD_FOLDER\work\log\snore-send.log"
-    & $script:SnorePath\snore-send.exe -t $title -m $message |Write-Host
+    & $script:SnorePath\snore-send.exe -t $title -m $message | Write-Host
     $env:LIBSNORE_LOG_TO_FILE=0
 }
 
-function FetchArtifact([string]$host, [string] $name){
-    
+function FetchArtifact([string] $name){
+    $fileName = $name-$env:COMPILER.zip
+    pushd $env:APPVEYOR_BUILD_FOLDER\work\
+    Start-FileDownload $env:FETCH_ARTIFATCS_HOST/work/$fileName
+    7z e $fileName -o$env:APPVEYOR_BUILD_FOLDER\work\install
+    popd
 }
 
-Export-ModuleMember -Function @("Init","CmakeImageInstall", "SetupSnoreSend", "SendSnoreNotification", "LogExec") -Variable @("CMAKE_INSTALL_ROOT")
+Export-ModuleMember -Function @("Init","CmakeImageInstall", "SetupSnoreSend", "SendSnoreNotification", "LogExec", "FetchArtifact") -Variable @("CMAKE_INSTALL_ROOT")
