@@ -81,7 +81,16 @@ function SETUP-QT()
         {
             $arch = "amd64"
         }
-        BAT-CALL "C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\vcvarsall.bat" $arch
+        $compilerDirs = @{
+                "msvc2010" = "VS100COMNTOOLS";
+                "msvc2012" = "VS110COMNTOOLS";
+                "msvc2013" = "VS120COMNTOOLS";
+                "msvc2015" = "VS140COMNTOOLS"
+            }
+
+        $compilerVar = $compilerDirs[$compiler.Split("_")[0]]
+        $compilerDir = (get-item -path "env:\$($compilerVar)").Value
+        BAT-CALL "$compilerDir\..\..\VC\vcvarsall.bat" $arch
         $script:MAKE="nmake"
         $script:CMAKE_GENERATOR="NMake Makefiles"
     }
