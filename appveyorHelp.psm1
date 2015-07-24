@@ -25,18 +25,30 @@ function BAT-CALL([string] $path, [string] $arg)
     }
 }
 
-function LogExec()
+
+function PrivateLog([string] $message)
+{
+    Add-Content "$env:APPVEYOR_BUILD_FOLDER\work\log\private.log" "$message`r`n"
+}
+
+function LogExecPrivate()
 {
     $OldErrorActionPreference=$ErrorActionPreference
     $ErrorActionPreference="Continue"
     $LastExitCode = 0
-    Write-Host $Args
+    PrivateLog $Args
     & $Args[0] $Args[1..$Args.Count]
     if(!$LastExitCode -eq 0)
     {
         exit $LastExitCode
     }
     $ErrorActionPreference=$OldErrorActionPreference
+}
+
+function LogExec()
+{
+    Write-Host $Args
+    LogExecPrivate $Args
 }
 
 function CmakeImageInstall([string] $destDir)
@@ -142,7 +154,7 @@ function SetupSnoreSend([string] $snorePath, [hashtable] $values)
     foreach($group in $values.Keys)
     {
         foreach($key in $values[$group].Keys){
-            & $script:SnorePath\snoresettings.exe  -a $group  $key  $values[$group][$key]
+            LogExecPrivate $script:SnorePath\snoresettings.exe  -a $group  $key  $values[$group][$key]
         }
     }
 }
@@ -151,14 +163,10 @@ function SendSnoreNotification([string] $title, [string] $message)
 {
     $env:LIBSNORE_LOG_TO_FILE=1
     $env:LIBSNORE_LOGFILE="$env:APPVEYOR_BUILD_FOLDER\work\log\snore-send.log"
-    & $script:SnorePath\snore-send.exe -t $title -m $message | Write-Host
+    LogExecPrivate $script:SnorePath\snore-send.exe -t $title -m $message
     $env:LIBSNORE_LOG_TO_FILE=0
 }
 
-function PrivateLog([string] $message)
-{
-    Add-Content "$env:APPVEYOR_BUILD_FOLDER\work\log\private.log" "$message`r`n"
-}
 
 function FetchArtifact([string] $name){
     $fileName = "$name-Qt$env:QT_VER-$env:COMPILER.zip"
