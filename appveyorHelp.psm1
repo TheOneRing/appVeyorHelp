@@ -155,9 +155,15 @@ function SendSnoreNotification([string] $title, [string] $message)
     $env:LIBSNORE_LOG_TO_FILE=0
 }
 
+function PrivateLog([string] $message)
+{
+    Add-Content "$env:APPVEYOR_BUILD_FOLDER\work\log\private.log" "$message`r`n"
+}
+
 function FetchArtifact([string] $name){
     $fileName = "$name-Qt$env:QT_VER-$env:COMPILER.zip"
     pushd $env:APPVEYOR_BUILD_FOLDER\work\
+    PrivateLog "$env:FETCH_ARTIFATCS_HOST/work/$fileName"
     Start-FileDownload "$env:FETCH_ARTIFATCS_HOST/work/$fileName"
     7z e $fileName -o$env:APPVEYOR_BUILD_FOLDER\work\install
     popd
