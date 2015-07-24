@@ -155,7 +155,7 @@ function SendSnoreNotification([string] $title, [string] $message)
 }
 
 function FetchArtifact([string] $name){
-    $fileName = $name-$env:COMPILER.zip
+    $fileName = "$name-Qt$env:QT_VER-$env:COMPILER.zip"
     pushd $env:APPVEYOR_BUILD_FOLDER\work\
     Start-FileDownload $env:FETCH_ARTIFATCS_HOST/work/$fileName
     7z e $fileName -o$env:APPVEYOR_BUILD_FOLDER\work\install
