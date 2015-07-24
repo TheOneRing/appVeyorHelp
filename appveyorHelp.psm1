@@ -48,7 +48,7 @@ function LogExecPrivate()
 function LogExec()
 {
     Write-Host $Args
-    $function:LogExecPrivate.Invoke($Args)
+    LogExecPrivate @Args
 }
 
 function CmakeImageInstall([string] $destDir)
