@@ -174,6 +174,8 @@ function FetchArtifact([string] $name){
     PrivateLog "$env:FETCH_ARTIFATCS_HOST/work/$fileName"
     Start-FileDownload "$env:FETCH_ARTIFATCS_HOST/work/$fileName"
     7z e $fileName -o"$env:APPVEYOR_BUILD_FOLDER\work\install"
+    ls "$env:APPVEYOR_BUILD_FOLDER\work\install"
+    ls "$env:APPVEYOR_BUILD_FOLDER\work\"
     popd
 }
 
