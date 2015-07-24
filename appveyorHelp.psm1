@@ -66,7 +66,7 @@ function CmakeImageInstall([string] $destDir)
 function SETUP-QT()
 {
     [string] $compiler=$env:COMPILER 
-    BAT-CALL "C:\Qt\5.5\$compiler\bin\qtenv2.bat"
+    BAT-CALL "C:\Qt\$env:QT_VER\$compiler\bin\qtenv2.bat"
     if ($compiler.StartsWith("mingw"))
     {
         #remove sh.exe from path
