@@ -108,7 +108,21 @@ function SETUP-QT()
     }
 }
 
-function Init([string[]] $modules)
+
+function FetchArtifact([string] $name){
+    $fileName = "$name-Qt$env:QT_VER-$env:COMPILER.zip"
+    pushd $env:APPVEYOR_BUILD_FOLDER\work\
+    PrivateLog "$env:FETCH_ARTIFATCS_HOST/work/$fileName"
+    Start-FileDownload "$env:FETCH_ARTIFATCS_HOST/work/$fileName"
+    pushd $env:APPVEYOR_BUILD_FOLDER\work\install
+    7z e "$env:APPVEYOR_BUILD_FOLDER\work\$fileName"
+    popd
+    ls "$env:APPVEYOR_BUILD_FOLDER\work\install"
+    popd
+}
+
+
+function Init([string[]] $modules, [string[]] $artifacts)
 {
     SETUP-QT
     mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\image
@@ -138,6 +152,10 @@ function Init([string[]] $modules)
             }
             cinst $module -y
         }
+        
+        foreach($artifact in $artifacts) {
+            FetchArtifact $artifact
+        }
 
     }
 }
@@ -166,18 +184,4 @@ function SendSnoreNotification([string] $title, [string] $message)
     LogExecPrivate $script:SnorePath\snore-send.exe -t $title -m $message
     $env:LIBSNORE_LOG_TO_FILE=0
 }
-
-
-function FetchArtifact([string] $name){
-    $fileName = "$name-Qt$env:QT_VER-$env:COMPILER.zip"
-    pushd $env:APPVEYOR_BUILD_FOLDER\work\
-    PrivateLog "$env:FETCH_ARTIFATCS_HOST/work/$fileName"
-    Start-FileDownload "$env:FETCH_ARTIFATCS_HOST/work/$fileName"
-    pushd $env:APPVEYOR_BUILD_FOLDER\work\install
-    7z e "$env:FETCH_ARTIFATCS_HOST/work/$fileName"
-    popd
-    ls "$env:APPVEYOR_BUILD_FOLDER\work\install"
-    popd
-}
-
-Export-ModuleMember -Function @("Init","CmakeImageInstall", "SetupSnoreSend", "SendSnoreNotification", "LogExec", "FetchArtifact") -Variable @("CMAKE_INSTALL_ROOT")
+Export-ModuleMember -Function @("Init","CmakeImageInstall", "SetupSnoreSend", "SendSnoreNotification", "LogExec") -Variable @("CMAKE_INSTALL_ROOT")
