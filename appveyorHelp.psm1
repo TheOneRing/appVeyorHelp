@@ -111,7 +111,6 @@ function Init([string[]] $modules, [string[]] $artifacts)
 {
     mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\image
     mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\build
-    mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\log
     
     SETUP-QT
     
