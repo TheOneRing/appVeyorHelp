@@ -127,10 +127,11 @@ function FetchArtifact([string] $name){
 
 function Init([string[]] $modules, [string[]] $artifacts)
 {
-    SETUP-QT
     mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\image
     mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\build
     mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\log
+    
+    SETUP-QT
     
     if($modules -contains "ninja") {
         $script:CMAKE_GENERATOR="Ninja"
