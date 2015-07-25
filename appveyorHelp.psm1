@@ -117,7 +117,6 @@ function Init([string[]] $modules, [string[]] $artifacts)
     if($modules -contains "ninja") {
         $script:CMAKE_GENERATOR="Ninja"
         $script:MAKE="ninja"
-        $env:PATH="$env:PATH;C:/tools/ninja"
     }
     
     if ( !(Test-Path "$env:APPVEYOR_BUILD_FOLDER\work\install" ) )
