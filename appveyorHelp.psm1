@@ -7,28 +7,15 @@ $CMAKE_INSTALL_ROOT="`"$INSTALL_DIR`"" -replace "\\", "/"
 Write-Host "CMAKE_INSTALL_ROOT = $CMAKE_INSTALL_ROOT"
 $env:PATH="$env:PATH;$script:INSTALL_DIR"
 
-#Set environment variables for Visual Studio Command Prompt
-#http://stackoverflow.com/questions/2124753/how-i-can-use-powershell-with-the-visual-studio-command-prompt
-function BAT-CALL([string] $path, [string] $arg)
-{
-    Write-Host "Calling `"$path`" `"$arg`""
-    cmd /c  "$path" "$arg" `&`& set `|`| exit 1|
-    foreach {
-      if ($_ -match "=") {
-        $v = $_.split("=")
-        #Write-Host "ENV:\$($v[0])=$($v[1])"
-        set-item -force -path "ENV:\$($v[0])"  -value "$($v[1])"
-      }
-    }
-    if($LastExitCode -eq 1) {
-        Write-Error "$path not found."
-    }
-}
-
-
-function PrivateLog([string] $message)
+function LogPrivate([string] $message)
 {
     Add-Content "$env:APPVEYOR_BUILD_FOLDER\work\log\private.log" "$message`r`n"
+}
+
+function Log([string] $message)
+{
+    Write-Host $message
+    LogPrivate $message
 }
 
 function LogExecPrivate()
@@ -36,7 +23,7 @@ function LogExecPrivate()
     $OldErrorActionPreference=$ErrorActionPreference
     $ErrorActionPreference="Continue"
     $LastExitCode = 0
-    PrivateLog $Args
+    LogPrivate $Args
     & $Args[0] $Args[1..$Args.Count]
     if(!$LastExitCode -eq 0)
     {
@@ -49,6 +36,24 @@ function LogExec()
 {
     Write-Host $Args
     LogExecPrivate @Args
+}
+
+#Set environment variables for Visual Studio Command Prompt
+#http://stackoverflow.com/questions/2124753/how-i-can-use-powershell-with-the-visual-studio-command-prompt
+function BAT-CALL([string] $path, [string] $arg)
+{
+    Log "Calling `"$path`" `"$arg`""
+    cmd /c  "$path" "$arg" `&`& set `|`| exit 1|
+    foreach {
+      if ($_ -match "=") {
+        $v = $_.split("=")
+        #Write-Host "ENV:\$($v[0])=$($v[1])"
+        set-item -force -path "ENV:\$($v[0])"  -value "$($v[1])"
+      }
+    }
+    if($LastExitCode -eq 1) {
+        Write-Error "$path not found."
+    }
 }
 
 function CmakeImageInstall([string] $destDir)
@@ -67,11 +72,11 @@ function CmakeImageInstall([string] $destDir)
     {
         $prefix=$prefix.substring(3)
     }
-    Write-Host "move $destDir\$prefix to $destDir"
+    Log "move $destDir\$prefix to $destDir"
     mv -Force "$destDir\$prefix\*" "$destDir"
-    Write-Host "prefix", $prefix
+    Log "prefix", $prefix
     $rootLeftOver = $prefix.substring(0, $prefix.indexOf("\"))
-    Write-Host "rm $destDir\$rootLeftOver"
+    Log "rm $destDir\$rootLeftOver"
     rm -Recurse "$destDir\$rootLeftOver"
 }
 
@@ -111,11 +116,11 @@ function SETUP-QT()
 
 function FetchArtifact([string] $name){
     $fileName = "$name-Qt$env:QT_VER-$env:COMPILER.zip"
+    Log "Installing artifact: $fileName"
     pushd $env:APPVEYOR_BUILD_FOLDER\work\
-    PrivateLog "$env:FETCH_ARTIFATCS_HOST/work/$fileName"
+    LogPrivate "$env:FETCH_ARTIFATCS_HOST/work/$fileName"
     Start-FileDownload "$env:FETCH_ARTIFATCS_HOST/work/$fileName"
     7z x $fileName -o"$env:APPVEYOR_BUILD_FOLDER\work\install"
-    ls "$env:APPVEYOR_BUILD_FOLDER\work\install"
     popd
 }
 
@@ -148,6 +153,7 @@ function Init([string[]] $modules, [string[]] $artifacts)
                 LogExec  $script:MAKE install
                 continue
             }
+            Log "Install chocolately package $module"
             cinst $module -y
         }
         
