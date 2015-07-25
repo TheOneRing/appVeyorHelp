@@ -7,23 +7,12 @@ $CMAKE_INSTALL_ROOT="`"$INSTALL_DIR`"" -replace "\\", "/"
 Write-Host "CMAKE_INSTALL_ROOT = $CMAKE_INSTALL_ROOT"
 $env:PATH="$env:PATH;$script:INSTALL_DIR"
 
-function LogPrivate([string] $message)
-{
-    Add-Content "$env:APPVEYOR_BUILD_FOLDER\work\log\private.log" "$message`r`n"
-}
-
-function Log([string] $message)
-{
-    Write-Host $message
-    LogPrivate $message
-}
-
-function LogExecPrivate()
+function LogExec()
 {
     $OldErrorActionPreference=$ErrorActionPreference
     $ErrorActionPreference="Continue"
     $LastExitCode = 0
-    LogPrivate $Args
+    Write-Host $Args
     & $Args[0] $Args[1..$Args.Count]
     if(!$LastExitCode -eq 0)
     {
@@ -32,17 +21,11 @@ function LogExecPrivate()
     $ErrorActionPreference=$OldErrorActionPreference
 }
 
-function LogExec()
-{
-    Write-Host $Args
-    LogExecPrivate @Args
-}
-
 #Set environment variables for Visual Studio Command Prompt
 #http://stackoverflow.com/questions/2124753/how-i-can-use-powershell-with-the-visual-studio-command-prompt
 function BAT-CALL([string] $path, [string] $arg)
 {
-    Log "Calling `"$path`" `"$arg`""
+    Write-Host "Calling `"$path`" `"$arg`""
     cmd /c  "$path" "$arg" `&`& set `|`| exit 1|
     foreach {
       if ($_ -match "=") {
@@ -72,11 +55,11 @@ function CmakeImageInstall([string] $destDir)
     {
         $prefix=$prefix.substring(3)
     }
-    Log "move $destDir\$prefix to $destDir"
+    Write-Host "move $destDir\$prefix to $destDir"
     mv -Force "$destDir\$prefix\*" "$destDir"
-    Log "prefix", $prefix
+    Write-Host "prefix", $prefix
     $rootLeftOver = $prefix.substring(0, $prefix.indexOf("\"))
-    Log "rm $destDir\$rootLeftOver"
+    Write-Host "rm $destDir\$rootLeftOver"
     rm -Recurse "$destDir\$rootLeftOver"
 }
 
@@ -116,9 +99,8 @@ function SETUP-QT()
 
 function FetchArtifact([string] $name){
     $fileName = "$name-Qt$env:QT_VER-$env:COMPILER.zip"
-    Log "Installing artifact: $fileName"
+    Write-Host "Installing artifact: $fileName"
     pushd $env:APPVEYOR_BUILD_FOLDER\work\
-    LogPrivate "$env:FETCH_ARTIFATCS_HOST/work/$fileName"
     Start-FileDownload "$env:FETCH_ARTIFATCS_HOST/work/$fileName"
     7z x $fileName -o"$env:APPVEYOR_BUILD_FOLDER\work\install"
     popd
@@ -154,7 +136,7 @@ function Init([string[]] $modules, [string[]] $artifacts)
                 LogExec  $script:MAKE install
                 continue
             }
-            Log "Install chocolately package $module"
+            Write-Host "Install chocolately package $module"
             cinst $module -y
         }
         
@@ -165,28 +147,4 @@ function Init([string[]] $modules, [string[]] $artifacts)
     }
 }
 
-function SetupSnoreSend([string] $snorePath, [hashtable] $values)
-{
-    $script:SnorePath = $snorePath
-    #init snore-send
-    $env:LIBSNORE_SETTINGS_FILE="$env:APPVEYOR_BUILD_FOLDER\work\log\snore-send-settings.ini"
-    $env:LIBSNORE_LOG_TO_FILE=1
-    $env:LIBSNORE_LOGFILE="$env:APPVEYOR_BUILD_FOLDER\work\log\init-snore-send.log"
-    & $script:SnorePath\snore-send.exe -t "Do" -m "init"
-    $env:LIBSNORE_LOG_TO_FILE=0
-    foreach($group in $values.Keys)
-    {
-        foreach($key in $values[$group].Keys){
-            LogExecPrivate $script:SnorePath\snoresettings.exe  -a $group  $key  $values[$group][$key]
-        }
-    }
-}
-
-function SendSnoreNotification([string] $title, [string] $message)
-{
-    $env:LIBSNORE_LOG_TO_FILE=1
-    $env:LIBSNORE_LOGFILE="$env:APPVEYOR_BUILD_FOLDER\work\log\snore-send.log"
-    LogExecPrivate $script:SnorePath\snore-send.exe -t $title -m $message
-    $env:LIBSNORE_LOG_TO_FILE=0
-}
-Export-ModuleMember -Function @("Init","CmakeImageInstall", "SetupSnoreSend", "SendSnoreNotification", "LogExec") -Variable @("CMAKE_INSTALL_ROOT")
+Export-ModuleMember -Function @("Init","CmakeImageInstall", "LogExec") -Variable @("CMAKE_INSTALL_ROOT")
