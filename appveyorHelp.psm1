@@ -1,5 +1,11 @@
 $ErrorActionPreference="Stop"
 
+$script:INSTALL_DIR="$env:APPVEYOR_BUILD_FOLDER\work\install"
+$CMAKE_INSTALL_ROOT="`"$INSTALL_DIR`"" -replace "\\", "/"
+Write-Host "CMAKE_INSTALL_ROOT = $CMAKE_INSTALL_ROOT"
+$env:PATH="$env:PATH;$script:INSTALL_DIR"
+
+    
 function LogExec()
 {
     $OldErrorActionPreference=$ErrorActionPreference
@@ -114,11 +120,6 @@ function Init([string[]] $modules, [string[]] $artifacts)
     $script:MAKE=""
     $script:CMAKE_GENERATOR=""
     $script:STRIP=$null
-
-    $script:INSTALL_DIR="$env:APPVEYOR_BUILD_FOLDER\work\install"
-    $CMAKE_INSTALL_ROOT="`"$INSTALL_DIR`"" -replace "\\", "/"
-    Write-Host "CMAKE_INSTALL_ROOT = $CMAKE_INSTALL_ROOT"
-    $env:PATH="$env:PATH;$script:INSTALL_DIR"
 
     mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\image | Out-Null
     mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\build | Out-Null
