@@ -13,7 +13,7 @@ function LogExec()
     $ErrorActionPreference="Continue"
     $LastExitCode = 0
     Write-Host $Args
-    & $Args[0] $Args[1..$Args.Count]
+    & $Args[0] Args[1..$Args.Count]
     if(!$LastExitCode -eq 0)
     {
         exit $LastExitCode
@@ -63,10 +63,16 @@ function CmakeImageInstall([string] $destDir)
     rm -Recurse "$destDir\$rootLeftOver"
 }
 
+function Get-QtDir()
+{
+    return "C:\Qt\$env:QT_VER\$env:COMPILER\"
+} 
+
 function SETUP-QT()
 {
-    [string] $compiler=$env:COMPILER 
-    BAT-CALL "C:\Qt\$env:QT_VER\$compiler\bin\qtenv2.bat"
+    [string] $compiler=$env:COMPILER
+    $qtDir = Get-QtDir
+    BAT-CALL  "$qtDir\bin\qtenv2.bat"
     if ($compiler.StartsWith("mingw"))
     {
         #remove sh.exe from path
@@ -96,21 +102,25 @@ function SETUP-QT()
     }
 }
 
+function GetArtifactName([string] $name)
+{
+    return "$name-Qt$env:QT_VER-$env:COMPILER.zip"
+}
 
 function FetchArtifact([string] $name){
-    $fileName = "$name-Qt$env:QT_VER-$env:COMPILER.zip"
+    $fileName = GetArtifactName $name
     Write-Host "Installing artifact: $fileName"
-    pushd $env:APPVEYOR_BUILD_FOLDER\work\
-    Start-FileDownload "$env:FETCH_ARTIFATCS_HOST/work/$fileName"
-    7z x $fileName -o"$env:APPVEYOR_BUILD_FOLDER\work\install"
-    popd
+    Start-FileDownload "$env:FETCH_ARTIFATCS_HOST/work/$fileName" -FileName "$env:APPVEYOR_BUILD_FOLDER\work\artifacts\$fileName"
+    LogExec 7z x "$env:APPVEYOR_BUILD_FOLDER\work\artifacts\$fileName" -o"$env:APPVEYOR_BUILD_FOLDER\work\install"
 }
 
 
 function Init([string[]] $modules, [string[]] $artifacts)
 {
-    mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\image
-    mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\build
+    $script:ARTIFACTS = $artifacts
+    mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\image | Out-Null
+    mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\build | Out-Null
+    mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\artifacts | Out-Null
     
     SETUP-QT
     
@@ -121,17 +131,19 @@ function Init([string[]] $modules, [string[]] $artifacts)
     
     if ( !(Test-Path "$env:APPVEYOR_BUILD_FOLDER\work\install" ) )
     {
-        mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\install
-        mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\git
+        mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\install | Out-Null
+        mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\git | Out-Null
         
         foreach($module in $modules) {
             if($module -eq "extra-cmake-modules") {
                 mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\build\extra-cmake-modules
-                cd $env:APPVEYOR_BUILD_FOLDER\work\git
-                LogExec git clone -q git://anongit.kde.org/extra-cmake-modules.git                
-                cd $env:APPVEYOR_BUILD_FOLDER\work\build\extra-cmake-modules
+                pushd $env:APPVEYOR_BUILD_FOLDER\work\git
+                LogExec git clone -q git://anongit.kde.org/extra-cmake-modules.git
+                popd
+                pushd  $env:APPVEYOR_BUILD_FOLDER\work\build\extra-cmake-modules
                 LogExec cmake -G $script:CMAKE_GENERATOR $env:APPVEYOR_BUILD_FOLDER\work\git\extra-cmake-modules -DCMAKE_INSTALL_PREFIX="$CMAKE_INSTALL_ROOT"
                 LogExec  $script:MAKE install
+                popd
                 continue
             }
             Write-Host "Install chocolately package $module"
@@ -145,4 +157,40 @@ function Init([string[]] $modules, [string[]] $artifacts)
     }
 }
 
-Export-ModuleMember -Function @("Init","CmakeImageInstall", "LogExec") -Variable @("CMAKE_INSTALL_ROOT")
+function relativePath([string] $root, [string] $path)
+{
+    pushd $root
+    $out = Resolve-Path -Relative $path
+    popd
+    return $out
+}
+
+function CreateDeployImage([string] $imageName, [string[]] $whiteList) {
+    Write-Host "CreateDeployImage $imageName"
+    mkdir "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName"
+    foreach($artifact in $script:ARTIFACTS)
+    {
+        $fileName  = GetArtifactName $artifact
+        LogExec 7z x "$env:APPVEYOR_BUILD_FOLDER\work\artifacts\$fileName" -o"$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName"        
+    }
+    cp -Recurse "$env:APPVEYOR_BUILD_FOLDER\work\image\*" "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName"
+    
+    $qtDir = Get-QtDir
+    $qtFiles = ls $qtDir -Recurse
+    foreach($fileName in $qtFiles.FullName)
+    {
+        $relPath = (relativePath $qtDir $fileName).SubString(2)
+        if($whiteList | Where {$relPath -match $_})
+        {
+            Write-Host "copy $fileName to $env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName\$relPath"
+            mkdir -Force (Split-Path -Parent $env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName\$relPath) | Out-Null
+            cp -Force $fileName $env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName\$relPath
+        }
+    }
+    
+    LogExec 7z a "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName.7z" "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName"   
+    
+    
+}
+
+Export-ModuleMember -Function @("Init","CmakeImageInstall", "CreateDeployImage", "LogExec") -Variable @("CMAKE_INSTALL_ROOT")
