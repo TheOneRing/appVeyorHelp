@@ -173,7 +173,7 @@ function CreateDeployImage([string] $imageName, [string[]] $whiteList) {
         $fileName  = GetArtifactName $artifact
         LogExec 7z x "$env:APPVEYOR_BUILD_FOLDER\work\artifacts\$fileName" -o"$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName"        
     }
-    cp -Recurse "$env:APPVEYOR_BUILD_FOLDER\work\image\*" "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName"
+    cp -Recurse -Force "$env:APPVEYOR_BUILD_FOLDER\work\image\*" "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName"
     
     $qtDir = Get-QtDir
     $qtFiles = ls $qtDir -Recurse
