@@ -181,7 +181,7 @@ function StripFile([string] $name)
 
 function GetDeployImageName()
 {
-    if($env:APPVEYOR_REPO_TAG) {
+    if($env:APPVEYOR_REPO_TAG -eq "true") {
         return "$env:APPVEYOR_PROJECT_NAME-Qt$env:QT_VER-$env:COMPILER"
     }else{
         return "$env:APPVEYOR_PROJECT_NAME-$env:APPVEYOR_REPO_BRANCH-$env:APPVEYOR_REPO_COMMIT-Qt$env:QT_VER-$env:COMPILER"
