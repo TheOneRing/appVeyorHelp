@@ -1,11 +1,4 @@
 $ErrorActionPreference="Stop"
-$script:MAKE=""
-$script:CMAKE_GENERATOR=""
-
-$script:INSTALL_DIR="$env:APPVEYOR_BUILD_FOLDER\work\install"
-$CMAKE_INSTALL_ROOT="`"$INSTALL_DIR`"" -replace "\\", "/"
-Write-Host "CMAKE_INSTALL_ROOT = $CMAKE_INSTALL_ROOT"
-$env:PATH="$env:PATH;$script:INSTALL_DIR"
 
 function LogExec()
 {
@@ -79,6 +72,7 @@ function SETUP-QT()
         $env:PATH=$env:PATH -replace "C:\\Program Files \(x86\)\\Git\\bin", ""
         $script:MAKE="mingw32-make"
         $script:CMAKE_GENERATOR="MinGW Makefiles"
+        $script:STRIP=@("strip", "-s")
     }
     elseif ($compiler.StartsWith("msvc"))
     {
@@ -114,10 +108,18 @@ function FetchArtifact([string] $name){
     LogExec 7z x "$env:APPVEYOR_BUILD_FOLDER\work\artifacts\$fileName" -o"$env:APPVEYOR_BUILD_FOLDER\work\install"
 }
 
-
 function Init([string[]] $modules, [string[]] $artifacts)
 {
     $script:ARTIFACTS = $artifacts
+    $script:MAKE=""
+    $script:CMAKE_GENERATOR=""
+    $script:STRIP=$null
+
+    $script:INSTALL_DIR="$env:APPVEYOR_BUILD_FOLDER\work\install"
+    $CMAKE_INSTALL_ROOT="`"$INSTALL_DIR`"" -replace "\\", "/"
+    Write-Host "CMAKE_INSTALL_ROOT = $CMAKE_INSTALL_ROOT"
+    $env:PATH="$env:PATH;$script:INSTALL_DIR"
+
     mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\image | Out-Null
     mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\build | Out-Null
     mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\artifacts | Out-Null
@@ -165,32 +167,61 @@ function relativePath([string] $root, [string] $path)
     return $out
 }
 
-function CreateDeployImage([string] $imageName, [string[]] $whiteList) {
-    Write-Host "CreateDeployImage $imageName"
-    mkdir "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName"
-    foreach($artifact in $script:ARTIFACTS)
-    {
-        $fileName  = GetArtifactName $artifact
-        LogExec 7z x "$env:APPVEYOR_BUILD_FOLDER\work\artifacts\$fileName" -o"$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName"        
-    }
-    cp -Recurse -Force "$env:APPVEYOR_BUILD_FOLDER\work\image\*" "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName"
-    
-    $qtDir = Get-QtDir
-    $qtFiles = ls $qtDir -Recurse
-    foreach($fileName in $qtFiles.FullName)
-    {
-        $relPath = (relativePath $qtDir $fileName).SubString(2)
-        if($whiteList | Where {$relPath -match $_})
+function StripFile([string] $name)
+{
+    if($script:STRIP) {
+        if( $name.EndsWith(".dll") -or $name.EndsWith(".exe")) 
         {
-            Write-Host "copy $fileName to $env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName\$relPath"
-            mkdir -Force (Split-Path -Parent $env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName\$relPath) | Out-Null
-            cp -Force $fileName $env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName\$relPath
+            Write-Host "strip file $name"
+            LogExec @script:STRIP $name
         }
     }
-    
-    LogExec 7z a "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName.7z" "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName"   
-    
-    
 }
 
-Export-ModuleMember -Function @("Init","CmakeImageInstall", "CreateDeployImage", "LogExec") -Variable @("CMAKE_INSTALL_ROOT")
+function GetDeployImageName()
+{
+    if($env:APPVEYOR_REPO_TAG) {
+        return "$env:APPVEYOR_PROJECT_NAME-Qt$env:QT_VER-$env:COMPILER"
+    }else{
+        return "$env:APPVEYOR_PROJECT_NAME-$env:APPVEYOR_REPO_BRANCH-$env:APPVEYOR_REPO_COMMIT-Qt$env:QT_VER-$env:COMPILER"
+    }
+}
+function CreateDeployImage([string[]] $whiteList) 
+{
+    $imageName = GetDeployImageName
+    $deployPath = "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName"
+    
+    function copyWithWhitelist([string] $root)
+    {
+        $files = ls $root -Recurse
+        foreach($fileName in $files.FullName)
+        {
+            $relPath = (relativePath $root $fileName).SubString(2)
+            if($whiteList | Where {$relPath -match $_})
+            {
+                Write-Host "copy $fileName to $deployPath\$relPath"
+                mkdir -Force (Split-Path -Parent $deployPath\$relPath) | Out-Null
+                cp -Force $fileName $deployPath\$relPath
+                StripFile $deployPath\$relPath
+            }
+        }
+    }
+    Write-Host "CreateDeployImage $imageName"
+    mkdir $deployPath | Out-Null
+    
+    
+    copyWithWhitelist "$env:APPVEYOR_BUILD_FOLDER\work\image\"
+    copyWithWhitelist "$env:APPVEYOR_BUILD_FOLDER\work\install\"
+    copyWithWhitelist (Get-QtDir)
+    Write-Host "Deploy path $deployPath"
+    return $deployPath 
+}
+
+function 7ZipDeployImage()
+{
+    $imageName = GetDeployImageName
+    LogExec 7z a "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName.7z" "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName"
+    Push-AppveyorArtifact "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName.7z"
+}
+
+Export-ModuleMember -Function @("Init","CmakeImageInstall", "CreateDeployImage", "LogExec", "7ZipDeployImage") -Variable @("CMAKE_INSTALL_ROOT")
