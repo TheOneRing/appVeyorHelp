@@ -117,7 +117,7 @@ function FetchArtifact([string] $name){
 function Install-ChocolatelyModule([string] $module, [string[]] $args)
 {
     Write-Host "Install chocolately package $module"
-    cinst $module @args -y
+    LogExec cinst $module @args -y
 }
 
 function Init([string[]] $modules, [string[]] $artifacts)
@@ -250,9 +250,8 @@ function NsisDeployImage([string] $scriptName)
 {
     $imageName = Get-DeployImageName
     $installerName = "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName.exe"
-    $nsisDir = (Get-ItemProperty HKLM:\SOFTWARE\Wow6432Node\NSIS)."(default)"
     $version = Get-Version    
-    LogExec $nsisDir\makensis.exe /DgitDir=$env:APPVEYOR_BUILD_FOLDER /Dsetupname=$installerName /Dcaption=$imageName /Dversion=$version /Dsrcdir=$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName $scriptName 
+    LogExec makensis.exe /DgitDir=$env:APPVEYOR_BUILD_FOLDER /Dsetupname=$installerName /Dcaption=$imageName /Dversion=$version /Dsrcdir=$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName $scriptName 
     Push-AppveyorArtifact $installerName
 }
 
