@@ -71,6 +71,8 @@ function SETUP-QT()
 {
     [string] $compiler=$env:COMPILER
     $qtDir = Get-QtDir
+    $script:QT_BINARY_DIRS = @($qtDir)
+    
     BAT-CALL  "$qtDir\bin\qtenv2.bat"
     if ($compiler.StartsWith("mingw"))
     {
@@ -79,6 +81,7 @@ function SETUP-QT()
         $script:MAKE="mingw32-make"
         $script:CMAKE_GENERATOR="MinGW Makefiles"
         $script:STRIP=@("strip", "-s")
+        $script:QT_BINARY_DIRS.Add("$qtDir\..\..\Tools\$compiler\opt\bin")
     }
     elseif ($compiler.StartsWith("msvc"))
     {
@@ -221,10 +224,13 @@ function CreateDeployImage([string[]] $whiteList)
             $relPath = (relativePath $root $fileName).SubString(2)
             if($whiteList | Where {$relPath -match $_})
             {
-                Write-Host "copy $fileName to $deployPath\$relPath"
-                mkdir -Force (Split-Path -Parent $deployPath\$relPath) | Out-Null
-                cp -Force $fileName $deployPath\$relPath
-                StripFile $deployPath\$relPath
+                if(!Test-Path $deployPath\$relPath) 
+                {
+                    Write-Host "copy $fileName to $deployPath\$relPath"
+                    mkdir -Force (Split-Path -Parent $deployPath\$relPath) | Out-Null
+                    cp -Force $fileName $deployPath\$relPath
+                    StripFile $deployPath\$relPath
+                }
             }
         }
     }
@@ -234,7 +240,10 @@ function CreateDeployImage([string[]] $whiteList)
     
     copyWithWhitelist "$env:APPVEYOR_BUILD_FOLDER\work\image\"
     copyWithWhitelist "$env:APPVEYOR_BUILD_FOLDER\work\install\"
-    copyWithWhitelist (Get-QtDir)
+    foreach($folder in $script:QT_BINARY_DIRS)
+    {
+        copyWithWhitelist $folder
+    }
     Write-Host "Deploy path $deployPath"
     return $deployPath 
 }
