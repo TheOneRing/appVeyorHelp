@@ -114,6 +114,12 @@ function FetchArtifact([string] $name){
     LogExec 7z x "$env:APPVEYOR_BUILD_FOLDER\work\artifacts\$fileName" -o"$env:APPVEYOR_BUILD_FOLDER\work\install"
 }
 
+function Install-ChocolatelyModule([string] $module, [string[]] $args)
+{
+    Write-Host "Install chocolately package $module"
+    cinst $module @args -y
+}
+
 function Init([string[]] $modules, [string[]] $artifacts)
 {
     $script:ARTIFACTS = $artifacts
@@ -149,8 +155,11 @@ function Init([string[]] $modules, [string[]] $artifacts)
                 popd
                 continue
             }
-            Write-Host "Install chocolately package $module"
-            cinst @module -y
+            if($module -eq "nsis") 
+            {
+                Install-ChocolatelyModule $module @("-pre")
+            }
+            Install-ChocolatelyModule $module
         }
         
         foreach($artifact in $artifacts) {
