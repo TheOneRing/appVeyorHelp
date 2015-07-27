@@ -157,7 +157,8 @@ function Init([string[]] $modules, [string[]] $artifacts)
             }
             if($module -eq "nsis") 
             {
-                Install-ChocolatelyModule $module @("-pre")
+                Install-ChocolatelyModule "nsis.portable" @("-pre")
+                continue
             }
             Install-ChocolatelyModule $module
         }
