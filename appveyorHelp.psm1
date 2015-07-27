@@ -81,7 +81,7 @@ function SETUP-QT()
         $script:MAKE="mingw32-make"
         $script:CMAKE_GENERATOR="MinGW Makefiles"
         $script:STRIP=@("strip", "-s")
-        $script:QT_BINARY_DIRS.Add("$qtDir\..\..\Tools\$compiler\opt\bin")
+        $script:QT_BINARY_DIRS += "$qtDir\..\..\Tools\$compiler\opt\bin"
     }
     elseif ($compiler.StartsWith("msvc"))
     {
