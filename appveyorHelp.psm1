@@ -114,10 +114,10 @@ function FetchArtifact([string] $name){
     LogExec 7z x "$env:APPVEYOR_BUILD_FOLDER\work\artifacts\$fileName" -o"$env:APPVEYOR_BUILD_FOLDER\work\install"
 }
 
-function Install-ChocolatelyModule([string] $module, [string[]] $args)
+function Install-ChocolatelyModule([string] $module, [string[]] $myargs)
 {
     Write-Host "Install chocolately package $module"
-    LogExec cinst $module @args -y
+    LogExec cinst $module @myargs -y
 }
 
 function Init([string[]] $modules, [string[]] $artifacts)
