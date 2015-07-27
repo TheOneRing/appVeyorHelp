@@ -224,7 +224,7 @@ function CreateDeployImage([string[]] $whiteList)
             $relPath = (relativePath $root $fileName).SubString(2)
             if($whiteList | Where {$relPath -match $_})
             {
-                if(!Test-Path $deployPath\$relPath) 
+                if(!(Test-Path $deployPath\$relPath)) 
                 {
                     Write-Host "copy $fileName to $deployPath\$relPath"
                     mkdir -Force (Split-Path -Parent $deployPath\$relPath) | Out-Null
