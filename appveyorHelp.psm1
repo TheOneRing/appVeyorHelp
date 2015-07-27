@@ -150,7 +150,7 @@ function Init([string[]] $modules, [string[]] $artifacts)
                 continue
             }
             Write-Host "Install chocolately package $module"
-            cinst $module -y
+            cinst @module -y
         }
         
         foreach($artifact in $artifacts) {
@@ -179,17 +179,28 @@ function StripFile([string] $name)
     }
 }
 
-function GetDeployImageName()
+function Get-Version()
 {
     if($env:APPVEYOR_REPO_TAG -eq "true") {
-        return "$env:APPVEYOR_PROJECT_NAME-Qt$env:QT_VER-$env:COMPILER"
+        return $env:APPVEYOR_REPO_TAG_NAME
     }else{
-        return "$env:APPVEYOR_PROJECT_NAME-$env:APPVEYOR_REPO_BRANCH-$env:APPVEYOR_REPO_COMMIT-Qt$env:QT_VER-$env:COMPILER"
+        $commit = ([string]$env:APPVEYOR_REPO_COMMIT).SubString(0,6)
+        return $commit
+    }
+}
+
+function Get-DeployImageName()
+{
+    $version = Get-Version
+    if($env:APPVEYOR_REPO_TAG -eq "true") {
+        return "$env:APPVEYOR_PROJECT_NAME-$version-Qt$env:QT_VER-$env:COMPILER"
+    }else{
+        return "$env:APPVEYOR_PROJECT_NAME-$env:APPVEYOR_REPO_BRANCH-$version-Qt$env:QT_VER-$env:COMPILER"
     }
 }
 function CreateDeployImage([string[]] $whiteList) 
 {
-    $imageName = GetDeployImageName
+    $imageName = Get-DeployImageName
     $deployPath = "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName"
     
     function copyWithWhitelist([string] $root)
@@ -220,9 +231,19 @@ function CreateDeployImage([string[]] $whiteList)
 
 function 7ZipDeployImage()
 {
-    $imageName = GetDeployImageName
+    $imageName = Get-DeployImageName
     LogExec 7z a "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName.7z" "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName"
     Push-AppveyorArtifact "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName.7z"
 }
 
-Export-ModuleMember -Function @("Init","CmakeImageInstall", "CreateDeployImage", "LogExec", "7ZipDeployImage") -Variable @("CMAKE_INSTALL_ROOT")
+function NsisDeployImage([string] $scriptName)
+{
+    $imageName = Get-DeployImageName
+    $installerName = "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName.exe"
+    $nsisDir = (Get-ItemProperty HKLM:\SOFTWARE\Wow6432Node\NSIS)."(default)"
+    $version = Get-Version    
+    LogExec $nsisDir\makensis.exe /DgitDir=$env:APPVEYOR_BUILD_FOLDER /Dsetupname=$installerName /Dcaption=$imageName /Dversion=$version /Dsrcdir=$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName /V4 $scriptName 
+    Push-AppveyorArtifact $installerName
+}
+
+Export-ModuleMember -Function @("Init","CmakeImageInstall", "CreateDeployImage", "LogExec", "7ZipDeployImage", "NsisDeployImage") -Variable @("CMAKE_INSTALL_ROOT")
