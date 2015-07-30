@@ -124,7 +124,7 @@ function Install-CmakeGitModule([string] $url, [hashtable] $arguments)
     popd
 }
 
-function Init([string[]] $chocoDeps, [ordered] $cmakeModules)
+function Init([string[]] $chocoDeps, [System.Collections.Specialized.OrderedDictionary] $cmakeModules)
 {
     $script:MAKE=""
     $script:CMAKE_GENERATOR=""
