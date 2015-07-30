@@ -230,7 +230,7 @@ function CmakeImageInstall()
 function CreateDeployImage([string[]] $whiteList) 
 {
     $imageName = Get-DeployImageName
-    $deployPath = "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName"
+    $deployPath = "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName"    
     
     function copyWithWhitelist([string] $root)
     {
@@ -254,7 +254,7 @@ function CreateDeployImage([string[]] $whiteList)
     mkdir $deployPath | Out-Null
     
     
-    copyWithWhitelist "$env:APPVEYOR_BUILD_FOLDER\work\image\"
+    copyWithWhitelist "$env:APPVEYOR_BUILD_FOLDER\work\cmakeDeployImage\$imageName"
     copyWithWhitelist "$env:APPVEYOR_BUILD_FOLDER\work\install\"
     foreach($folder in $script:QT_BINARY_DIRS)
     {
