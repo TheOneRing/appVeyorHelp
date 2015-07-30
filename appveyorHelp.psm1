@@ -5,6 +5,23 @@ $CMAKE_INSTALL_ROOT="`"$INSTALL_DIR`"" -replace "\\", "/"
 Write-Host "CMAKE_INSTALL_ROOT = $CMAKE_INSTALL_ROOT"
 $env:PATH="$env:PATH;$script:INSTALL_DIR"
 
+if(!$env:CI -eq "true")
+{
+    function Push-AppveyorArtifact()
+    {
+        Write-Host "Push-AppveyorArtifact $ARGS"
+    }
+    
+    function Start-FileDownload([string] $url, [string] $out)
+    {
+        if(!$out)
+        {
+            $out = $url.SubString($url.LastIndexOf("/"))
+        }
+        wget $url -Outfile $out
+    }
+}
+
     
 function LogExec()
 {
@@ -36,30 +53,6 @@ function BAT-CALL([string] $path, [string] $arg)
     if($LastExitCode -eq 1) {
         Write-Error "$path not found."
     }
-}
-
-function CmakeImageInstall([string] $destDir)
-{
-    rm -Recurse "$destDir"
-    $destDir=$destDir -replace "/", "\\"
-    $env:DESTDIR=$destDir
-    LogExec $script:MAKE install
-    if(!$LastExitCode -eq 0)
-    {
-        Write-Error "Build Failed"
-    }
-    $env:DESTDIR=$null
-    $prefix=$script:INSTALL_DIR
-    if( $prefix.substring(1,1) -eq ":")
-    {
-        $prefix=$prefix.substring(3)
-    }
-    Write-Host "move $destDir\$prefix to $destDir"
-    mv -Force "$destDir\$prefix\*" "$destDir"
-    Write-Host "prefix", $prefix
-    $rootLeftOver = $prefix.substring(0, $prefix.indexOf("\"))
-    Write-Host "rm $destDir\$rootLeftOver"
-    rm -Recurse "$destDir\$rootLeftOver"
 }
 
 function Get-QtDir()
@@ -105,34 +98,40 @@ function SETUP-QT()
     }
 }
 
-function GetArtifactName([string] $name)
-{
-    return "$name-Qt$env:QT_VER-$env:COMPILER.zip"
-}
-
-function FetchArtifact([string] $name){
-    $fileName = GetArtifactName $name
-    Write-Host "Installing artifact: $fileName"
-    Start-FileDownload "$env:FETCH_ARTIFATCS_HOST/work/$fileName" -FileName "$env:APPVEYOR_BUILD_FOLDER\work\artifacts\$fileName"
-    LogExec 7z x "$env:APPVEYOR_BUILD_FOLDER\work\artifacts\$fileName" -o"$env:APPVEYOR_BUILD_FOLDER\work\install"
-}
-
 function Install-ChocolatelyModule([string] $module, [string[]] $myargs)
 {
     Write-Host "Install chocolately package $module"
     LogExec cinst $module @myargs -y
 }
 
-function Init([string[]] $modules, [string[]] $artifacts)
+function Install-CmakeGitModule([string] $url, [hashtable] $arguments)
 {
-    $script:ARTIFACTS = $artifacts
+    $module = $url.SubString($url.LastIndexOf("/")+1)
+    $module = $module.Substring(0,$module.Length - 4)
+    $branch = "--branch=master"
+    if($arguments.Contains("branch"))
+    {
+        $branch = $arguments["branch"]
+        $branch = "--branch=$branch"
+    }
+    mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\build\$module
+    pushd $env:APPVEYOR_BUILD_FOLDER\work\git
+    LogExec git clone -q --depth 1 $branch $url $module
+    popd
+    pushd  $env:APPVEYOR_BUILD_FOLDER\work\build\$module
+    LogExec cmake -G $script:CMAKE_GENERATOR $env:APPVEYOR_BUILD_FOLDER\work\git\$module -DCMAKE_INSTALL_PREFIX="$CMAKE_INSTALL_ROOT" $arguments["cmakeDefines"]
+    LogExec  $script:MAKE install
+    popd
+}
+
+function Init([string[]] $modules, [hashtable] $cmakeModules)
+{
     $script:MAKE=""
     $script:CMAKE_GENERATOR=""
     $script:STRIP=$null
 
     mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\image | Out-Null
     mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\build | Out-Null
-    mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\artifacts | Out-Null
     
     SETUP-QT
     
@@ -146,18 +145,7 @@ function Init([string[]] $modules, [string[]] $artifacts)
         mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\install | Out-Null
         mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\git | Out-Null
         
-        foreach($module in $modules) {
-            if($module -eq "extra-cmake-modules") {
-                mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\build\extra-cmake-modules
-                pushd $env:APPVEYOR_BUILD_FOLDER\work\git
-                LogExec git clone -q git://anongit.kde.org/extra-cmake-modules.git
-                popd
-                pushd  $env:APPVEYOR_BUILD_FOLDER\work\build\extra-cmake-modules
-                LogExec cmake -G $script:CMAKE_GENERATOR $env:APPVEYOR_BUILD_FOLDER\work\git\extra-cmake-modules -DCMAKE_INSTALL_PREFIX="$CMAKE_INSTALL_ROOT"
-                LogExec  $script:MAKE install
-                popd
-                continue
-            }
+        foreach($module in $chocoDeps) {
             if($module -eq "nsis") 
             {
                 Install-ChocolatelyModule "nsis.portable" @("-pre")
@@ -166,8 +154,8 @@ function Init([string[]] $modules, [string[]] $artifacts)
             Install-ChocolatelyModule $module
         }
         
-        foreach($artifact in $artifacts) {
-            FetchArtifact $artifact
+        foreach($key in $cmakeModules.Keys) {
+            Install-CmakeGitModule $key $cmakeModules[$key]
         }
 
     }
@@ -192,6 +180,17 @@ function StripFile([string] $name)
     }
 }
 
+function Get-DeployImageName()
+{
+    $version = Get-Version
+    if($env:APPVEYOR_REPO_TAG -eq "true") {
+        return "$env:APPVEYOR_PROJECT_NAME-$version-Qt$env:QT_VER-$env:COMPILER"
+    }else{
+        return "$env:APPVEYOR_PROJECT_NAME-$env:APPVEYOR_REPO_BRANCH-$version-Qt$env:QT_VER-$env:COMPILER"
+    }
+}
+
+
 function Get-Version()
 {
     if($env:APPVEYOR_REPO_TAG -eq "true") {
@@ -202,15 +201,32 @@ function Get-Version()
     }
 }
 
-function Get-DeployImageName()
+function CmakeImageInstall()
 {
-    $version = Get-Version
-    if($env:APPVEYOR_REPO_TAG -eq "true") {
-        return "$env:APPVEYOR_PROJECT_NAME-$version-Qt$env:QT_VER-$env:COMPILER"
-    }else{
-        return "$env:APPVEYOR_PROJECT_NAME-$env:APPVEYOR_REPO_BRANCH-$version-Qt$env:QT_VER-$env:COMPILER"
+    $imageName = Get-DeployImageName 
+    $destDir = "$env:APPVEYOR_BUILD_FOLDER\work\cmakeDeployImage\$imageName"
+    $env:DESTDIR = $destDir
+    LogExec $script:MAKE install
+    $env:DESTDIR = $null
+    if(!$LastExitCode -eq 0)
+    {
+        Write-Error "Build Failed"
     }
+    $env:DESTDIR=$null
+    $prefix=$script:INSTALL_DIR
+    if( $prefix.substring(1,1) -eq ":")
+    {
+        $prefix=$prefix.substring(3)
+    }
+    Write-Host "move $destDir\$prefix to $destDir"
+    mv -Force "$destDir\$prefix\*" "$destDir"
+    Write-Host "prefix", $prefix
+    $rootLeftOver = $prefix.substring(0, $prefix.indexOf("\"))
+    Write-Host "rm $destDir\$rootLeftOver"
+    rm -Recurse "$destDir\$rootLeftOver"
 }
+
+
 function CreateDeployImage([string[]] $whiteList) 
 {
     $imageName = Get-DeployImageName
