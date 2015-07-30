@@ -29,7 +29,7 @@ function LogExec()
     $ErrorActionPreference="Continue"
     $LastExitCode = 0
     Write-Host $Args
-    & $Args[0] $Args[1..$Args.Count]
+    & $Args[0] $Args[1..(($Args.Count)-1)]
     if(!$LastExitCode -eq 0)
     {
         exit $LastExitCode
