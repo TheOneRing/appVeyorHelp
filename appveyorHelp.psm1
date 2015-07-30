@@ -124,7 +124,7 @@ function Install-CmakeGitModule([string] $url, [hashtable] $arguments)
     popd
 }
 
-function Init([string[]] $modules, [hashtable] $cmakeModules)
+function Init([string[]] $chocoDeps, [hashtable] $cmakeModules)
 {
     $script:MAKE=""
     $script:CMAKE_GENERATOR=""
@@ -135,7 +135,7 @@ function Init([string[]] $modules, [hashtable] $cmakeModules)
     
     SETUP-QT
     
-    if($modules -contains "ninja") {
+    if($chocoDeps -contains "ninja") {
         $script:CMAKE_GENERATOR="Ninja"
         $script:MAKE="ninja"
     }
