@@ -129,7 +129,6 @@ function Init([string[]] $chocoDeps, [System.Collections.Specialized.OrderedDict
     $script:MAKE=""
     $script:CMAKE_GENERATOR=""
     $script:STRIP=$null
-    $script:INTERNAL_WHITELIST = @()
 
     mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\image | Out-Null
     mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\build | Out-Null
@@ -163,7 +162,6 @@ function Init([string[]] $chocoDeps, [System.Collections.Specialized.OrderedDict
         if($compiler.StartsWith("msvc"))
         {
             Write-Host "Downloading vcredist.exe"
-            $script:INTERNAL_WHITELIST += "vcredist\.exe"
             if($compiler.EndsWith("64"))
             {
                 Start-FileDownload http://download.microsoft.com/download/2/E/6/2E61CFA4-993B-4DD4-91DA-3737CD5CD6E3/vcredist_x64.exe $env:APPVEYOR_BUILD_FOLDER\work\install\vcredist.exe
@@ -247,7 +245,6 @@ function CreateDeployImage([string[]] $whiteList, [string[]] $blackList)
 {
     $imageName = Get-DeployImageName
     $deployPath = "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName"
-    $whiteList += $script:INTERNAL_WHITELIST
     
     function copyWithWhitelist([string] $root)
     {
@@ -297,7 +294,7 @@ function NsisDeployImage([string] $scriptName)
     $imageName = Get-DeployImageName
     $installerName = "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName.exe"
     $version = Get-Version    
-    LogExec makensis.exe /DgitDir=$env:APPVEYOR_BUILD_FOLDER /Dsetupname=$installerName /Dcaption=$imageName /Dversion=$version /Dcompiler=$env:COMPILER /Dsrcdir=$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName $scriptName 
+    LogExec makensis.exe /DgitDir=$env:APPVEYOR_BUILD_FOLDER /Dsetupname=$installerName /Dcaption=$imageName /Dversion=$version /Dcompiler=$env:COMPILER /Dvcredist=$env:APPVEYOR_BUILD_FOLDER\work\install\vcredist.exe /Dsrcdir=$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName $scriptName 
     Push-AppveyorArtifact $installerName
 }
 
