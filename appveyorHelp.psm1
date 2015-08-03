@@ -293,8 +293,14 @@ function NsisDeployImage([string] $scriptName)
 {
     $imageName = Get-DeployImageName
     $installerName = "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName.exe"
-    $version = Get-Version    
-    LogExec makensis.exe /DgitDir=$env:APPVEYOR_BUILD_FOLDER /Dsetupname=$installerName /Dcaption=$imageName /Dversion=$version /Dcompiler=$env:COMPILER /Dvcredist=$env:APPVEYOR_BUILD_FOLDER\work\install\vcredist.exe /Dsrcdir=$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName $scriptName 
+    $version = Get-Version
+    if(([string]$env:COMPILER).StartsWith("msvc")) 
+    {
+        $redist = $env:APPVEYOR_BUILD_FOLDER\work\install\vcredist.exe
+    }else{
+        $redist = ""
+    }
+    LogExec makensis.exe /DgitDir=$env:APPVEYOR_BUILD_FOLDER /Dsetupname=$installerName /Dcaption=$imageName /Dversion=$version /Dcompiler=$env:COMPILER /Dvcredist="$redist" /Dsrcdir=$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName $scriptName 
     Push-AppveyorArtifact $installerName
 }
 
