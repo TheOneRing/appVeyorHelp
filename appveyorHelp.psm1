@@ -129,6 +129,7 @@ function Init([string[]] $chocoDeps, [System.Collections.Specialized.OrderedDict
     $script:MAKE=""
     $script:CMAKE_GENERATOR=""
     $script:STRIP=$null
+    $script:INTERNAL_WHITELIST = @()
 
     mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\image | Out-Null
     mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\build | Out-Null
@@ -162,6 +163,7 @@ function Init([string[]] $chocoDeps, [System.Collections.Specialized.OrderedDict
         if($compiler.StartsWith("msvc"))
         {
             Write-Host "Downloading vcredist.exe"
+            $script:INTERNAL_WHITELIST += "vcredist\.exe"
             if($compiler.EndsWith("64"))
             {
                 Start-FileDownload http://download.microsoft.com/download/2/E/6/2E61CFA4-993B-4DD4-91DA-3737CD5CD6E3/vcredist_x64.exe $env:APPVEYOR_BUILD_FOLDER\work\install\vcredist.exe
@@ -244,7 +246,8 @@ function CmakeImageInstall()
 function CreateDeployImage([string[]] $whiteList, [string[]] $blackList) 
 {
     $imageName = Get-DeployImageName
-    $deployPath = "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName"    
+    $deployPath = "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName"
+    $whiteList += $script:INTERNAL_WHITELIST
     
     function copyWithWhitelist([string] $root)
     {
