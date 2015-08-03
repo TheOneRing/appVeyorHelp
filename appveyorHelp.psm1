@@ -157,6 +157,20 @@ function Init([string[]] $chocoDeps, [System.Collections.Specialized.OrderedDict
         foreach($key in $cmakeModules.Keys) {
             Install-CmakeGitModule $key $cmakeModules[$key]
         }
+        
+        [string] $compiler=$env:COMPILER
+        if($compiler.StartsWith("msvc"))
+        {
+            Write-Host "Downloading vcredist.exe"
+            if($compiler.EndsWith("64"))
+            {
+                Start-FileDownload http://download.microsoft.com/download/2/E/6/2E61CFA4-993B-4DD4-91DA-3737CD5CD6E3/vcredist_x64.exe $env:APPVEYOR_BUILD_FOLDER\work\install\vcredist.exe
+            }
+            else
+            {
+                Start-FileDownload http://download.microsoft.com/download/2/E/6/2E61CFA4-993B-4DD4-91DA-3737CD5CD6E3/vcredist_x86.exe $env:APPVEYOR_BUILD_FOLDER\work\install\vcredist.exe
+            }        
+        }
 
     }
 }
@@ -280,7 +294,7 @@ function NsisDeployImage([string] $scriptName)
     $imageName = Get-DeployImageName
     $installerName = "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName.exe"
     $version = Get-Version    
-    LogExec makensis.exe /DgitDir=$env:APPVEYOR_BUILD_FOLDER /Dsetupname=$installerName /Dcaption=$imageName /Dversion=$version /Dsrcdir=$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName $scriptName 
+    LogExec makensis.exe /DgitDir=$env:APPVEYOR_BUILD_FOLDER /Dsetupname=$installerName /Dcaption=$imageName /Dversion=$version /Dcompiler=$env:COMPILER /Dsrcdir=$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName $scriptName 
     Push-AppveyorArtifact $installerName
 }
 
