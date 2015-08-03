@@ -119,7 +119,7 @@ function Install-CmakeGitModule([string] $url, [hashtable] $arguments)
     LogExec git clone -q --depth 1 $branch $url $module
     popd
     pushd  $env:APPVEYOR_BUILD_FOLDER\work\build\$module
-    LogExec cmake -G $script:CMAKE_GENERATOR $env:APPVEYOR_BUILD_FOLDER\work\git\$module -DCMAKE_INSTALL_PREFIX="$CMAKE_INSTALL_ROOT" ([string[]]$arguments["cmakeDefines"])
+    LogExec cmake -G $script:CMAKE_GENERATOR $env:APPVEYOR_BUILD_FOLDER\work\git\$module -DCMAKE_INSTALL_PREFIX="$CMAKE_INSTALL_ROOT"
     LogExec  $script:MAKE install
     popd
 }
@@ -227,7 +227,7 @@ function CmakeImageInstall()
 }
 
 
-function CreateDeployImage([string[]] $whiteList) 
+function CreateDeployImage([string[]] $whiteList, [string[]] $blackList) 
 {
     $imageName = Get-DeployImageName
     $deployPath = "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName"    
@@ -240,6 +240,10 @@ function CreateDeployImage([string[]] $whiteList)
             $relPath = (relativePath $root $fileName).SubString(2)
             if($whiteList | Where {$relPath -match $_})
             {
+                if($blackList | Where {$relPath -match $_})
+                {
+                    continue
+                }
                 if(!(Test-Path $deployPath\$relPath)) 
                 {
                     Write-Host "copy $fileName to $deployPath\$relPath"
