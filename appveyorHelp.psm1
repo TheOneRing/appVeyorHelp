@@ -296,7 +296,7 @@ function NsisDeployImage([string] $scriptName)
     $version = Get-Version
     if(([string]$env:COMPILER).StartsWith("msvc")) 
     {
-        $redist = $env:APPVEYOR_BUILD_FOLDER\work\install\vcredist.exe
+        $redist = "$env:APPVEYOR_BUILD_FOLDER\work\install\vcredist.exe"
     }else{
         $redist = ""
     }
