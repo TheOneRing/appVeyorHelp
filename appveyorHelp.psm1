@@ -197,10 +197,13 @@ function StripFile([string] $name)
 function Get-DeployImageName()
 {
     $version = Get-Version
+    if( $env:APPVEYOR_BUILD_VERSION ) {
+        $version += "-$env:APPVEYOR_BUILD_VERSION"
+    }
     if($env:APPVEYOR_REPO_TAG -eq "true") {
-        return "$env:APPVEYOR_PROJECT_NAME-$version-Qt$env:QT_VER-$env:COMPILER"
+        return "$env:APPVEYOR_PROJECT_NAME_$version_Qt$env:QT_VER_$env:COMPILER"
     }else{
-        return "$env:APPVEYOR_PROJECT_NAME-$env:APPVEYOR_REPO_BRANCH-$version-Qt$env:QT_VER-$env:COMPILER"
+        return "$env:APPVEYOR_PROJECT_NAME_$env:APPVEYOR_REPO_BRANCH_$version_Qt$env:QT_VER_$env:COMPILER"
     }
 }
 
