@@ -133,7 +133,10 @@ function Init([string[]] $chocoDeps, [System.Collections.Specialized.OrderedDict
     mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\image | Out-Null
     mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\build | Out-Null
     
-    SETUP-QT
+    if($env:QT_VER)
+    {
+        SETUP-QT
+    }
     
     if($chocoDeps -contains "ninja") {
         $script:CMAKE_GENERATOR="Ninja"
