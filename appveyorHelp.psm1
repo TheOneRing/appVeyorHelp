@@ -204,9 +204,9 @@ function Get-DeployImageName()
     $version = Get-Version
     $version += "-$env:APPVEYOR_BUILD_VERSION"
     if($env:APPVEYOR_REPO_TAG -eq "true") {
-        return "$env:APPVEYOR_PROJECT_NAME_$version_Qt$env:QT_VER_$env:COMPILER"
+        return "$env:APPVEYOR_PROJECT_NAME`_$version`_Qt$env:QT_VER`_$env:COMPILER"
     }else{
-        return "$env:APPVEYOR_PROJECT_NAME_$env:APPVEYOR_REPO_BRANCH_$version_Qt$env:QT_VER_$env:COMPILER"
+        return "$env:APPVEYOR_PROJECT_NAME`_$env:APPVEYOR_REPO_BRANCH`_$version`_Qt$env:QT_VER`_$env:COMPILER"
     }
 }
 
