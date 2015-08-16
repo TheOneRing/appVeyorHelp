@@ -57,7 +57,12 @@ function BAT-CALL([string] $path, [string] $arg)
 
 function Get-QtDir()
 {
-    return "C:\Qt\$env:QT_VER\$env:COMPILER\"
+    $ver = 5.5
+    if($env:QT_VER)
+    {
+        $ver = $env:QT_VER
+    }
+    return "C:\Qt\$ver\$env:COMPILER\"
 } 
 
 function SETUP-QT()
@@ -133,10 +138,7 @@ function Init([string[]] $chocoDeps, [System.Collections.Specialized.OrderedDict
     mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\image | Out-Null
     mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\build | Out-Null
     
-    if($env:QT_VER)
-    {
-        SETUP-QT
-    }
+    SETUP-QT
     
     if($chocoDeps -contains "ninja") {
         $script:CMAKE_GENERATOR="Ninja"
