@@ -2,7 +2,6 @@ $ErrorActionPreference="Stop"
 
 $script:INSTALL_DIR="$env:APPVEYOR_BUILD_FOLDER\work\install"
 $CMAKE_INSTALL_ROOT="`"$INSTALL_DIR`"" -replace "\\", "/"
-Write-Host "CMAKE_INSTALL_ROOT = $CMAKE_INSTALL_ROOT"
 $env:PATH="$env:PATH;$script:INSTALL_DIR"
 
 if(!$env:CI -eq "true")
@@ -307,5 +306,8 @@ function NsisDeployImage([string] $scriptName)
     LogExec makensis.exe /DgitDir=$env:APPVEYOR_BUILD_FOLDER /Dsetupname=$installerName /Dcaption=$imageName /Dversion=$version /Dcompiler=$env:COMPILER /Dvcredist=$redist /Dsrcdir=$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName $scriptName 
     Push-AppveyorArtifact $installerName
 }
+
+Write-Host "CMAKE_INSTALL_ROOT: $CMAKE_INSTALL_ROOT"
+Write-Host "Image-Name: ", (Get-DeployImageName)
 
 Export-ModuleMember -Function @("Init","CmakeImageInstall", "CreateDeployImage", "LogExec", "7ZipDeployImage", "NsisDeployImage") -Variable @("CMAKE_INSTALL_ROOT")
