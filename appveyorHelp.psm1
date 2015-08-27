@@ -201,7 +201,6 @@ function StripFile([string] $name)
 function Get-DeployImageName()
 {
     $version = Get-Version
-    $version += "-$env:APPVEYOR_BUILD_VERSION"
     if($env:APPVEYOR_REPO_TAG -eq "true") {
         return "$env:APPVEYOR_PROJECT_NAME`_$version`_Qt$env:QT_VER`_$env:COMPILER"
     }else{
