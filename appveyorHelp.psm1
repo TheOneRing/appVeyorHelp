@@ -125,7 +125,7 @@ function Install-CmakeGitModule([string] $url, [hashtable] $arguments)
     LogExec git clone -q --depth 1 --branch ([string]$arguments["branch"]) $url $module
     popd
     pushd  $env:APPVEYOR_BUILD_FOLDER\work\build\$module
-    LogExec cmake -G $script:CMAKE_GENERATOR ([string]$arguments["buildType"] | -DCMAKE_BUILD_TYPE="$_") $env:APPVEYOR_BUILD_FOLDER\work\git\$module -DCMAKE_INSTALL_PREFIX="$CMAKE_INSTALL_ROOT" $arguments["options"]
+    LogExec cmake -G $script:CMAKE_GENERATOR  -DCMAKE_BUILD_TYPE=([string]$arguments["buildType"]) $env:APPVEYOR_BUILD_FOLDER\work\git\$module -DCMAKE_INSTALL_PREFIX="$CMAKE_INSTALL_ROOT" $arguments["options"]
     LogExec  $script:MAKE install
     popd
 }
