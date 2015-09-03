@@ -112,18 +112,20 @@ function Install-CmakeGitModule([string] $url, [hashtable] $arguments)
 {
     $module = $url.SubString($url.LastIndexOf("/")+1)
     $module = $module.Substring(0,$module.Length - 4)
-    $branch = "--branch=master"
-    if($arguments.Contains("branch"))
+    if(!$arguments.Contains("branch"))
     {
-        $branch = $arguments["branch"]
-        $branch = "--branch=$branch"
+        $arguments["branch"] = "master"
+    }
+    if(!$arguments.Contains("buildType"))
+    {
+        $arguments["buildType"] = "Release"
     }
     mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\build\$module
     pushd $env:APPVEYOR_BUILD_FOLDER\work\git
-    LogExec git clone -q --depth 1 $branch $url $module
+    LogExec git clone -q --depth 1 --branch=$arguments["branch"] $url $module
     popd
     pushd  $env:APPVEYOR_BUILD_FOLDER\work\build\$module
-    LogExec cmake -G $script:CMAKE_GENERATOR $env:APPVEYOR_BUILD_FOLDER\work\git\$module -DCMAKE_INSTALL_PREFIX="$CMAKE_INSTALL_ROOT" $arguments["options"]
+    LogExec cmake -G $script:CMAKE_GENERATOR -DCMAKE_BUILD_TYPE=$arguments["buildType"] $env:APPVEYOR_BUILD_FOLDER\work\git\$module -DCMAKE_INSTALL_PREFIX="$CMAKE_INSTALL_ROOT" $arguments["options"]
     LogExec  $script:MAKE install
     popd
 }
