@@ -304,7 +304,7 @@ function NsisDeployImage([string] $scriptName)
     }else{
         $redist = "none"
     }
-    if($compiler.EndsWith("64"))
+    if($env:COMPILER.EndsWith("64"))
     {
         $defaultinstdir = "`$PROGRAMFILES64"
     }else{
