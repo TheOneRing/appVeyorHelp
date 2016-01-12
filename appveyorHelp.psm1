@@ -306,9 +306,9 @@ function NsisDeployImage([string] $scriptName)
     }
     if($compiler.EndsWith("64"))
     {
-        $defaultinstdir="$PROGRAMFILES64"
+        $defaultinstdir = "`$PROGRAMFILES64"
     }else{
-        $defaultinstdir="$PROGRAMFILES"
+        $defaultinstdir = "`$PROGRAMFILES"
     }
     LogExec makensis.exe /DgitDir=$env:APPVEYOR_BUILD_FOLDER /Dsetupname=$installerName /Dcaption=$imageName /Dversion=$version /Dcompiler=$env:COMPILER /Dvcredist=$redist /Ddefaultinstdir=$defaultinstdir /Dsrcdir=$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName $scriptName 
     Push-AppveyorArtifact $installerName
