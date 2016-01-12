@@ -289,7 +289,7 @@ function CreateDeployImage([string[]] $whiteList, [string[]] $blackList)
 function 7ZipDeployImage()
 {
     $imageName = Get-DeployImageName
-    LogExec 7z a "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName.7z" "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName"
+    LogExec 7za a "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName.7z" "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName"
     Push-AppveyorArtifact "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName.7z"
 }
 
