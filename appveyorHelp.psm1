@@ -327,14 +327,14 @@ function NsisDeployImage([string] $scriptName)
 function DeleteEmptyFodlers([string] $root)
 {
     $Folders = @()
-     foreach($Folder in (Get-ChildItem -Path $root -Recurse -Directory))
+    foreach($Folder in (Get-ChildItem -Path $root -Recurse -Directory))
        {  
             $Folders += New-Object PSObject -Property @{
                 Object = $Folder
                 Depth = ($Folder.FullName.Split("\")).Count
             }
-      }
-      $Folders = $Folders | Sort Depth -Descending
+    }
+    $Folders = $Folders | Sort Depth -Descending
  
     foreach($Folder in $Folders)
     {
@@ -344,7 +344,7 @@ function DeleteEmptyFodlers([string] $root)
             Remove-Item -Path $Folder.Object.FullName -Force
        }
     }
- 
+
 }
 
 
