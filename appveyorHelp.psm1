@@ -99,6 +99,14 @@ function SETUP-QT()
         BAT-CALL "$compilerDir\..\..\VC\vcvarsall.bat" $arch
         $script:MAKE="nmake"
         $script:CMAKE_GENERATOR="NMake Makefiles"
+        if($arch -eq "x86")
+        { 
+            $script:QT_BINARY_DIRS += ("C:\OpenSSL-Win32")
+        }
+        else
+        {
+            $script:QT_BINARY_DIRS += ("C:\OpenSSL-Win64")
+        }
     }
 }
 
