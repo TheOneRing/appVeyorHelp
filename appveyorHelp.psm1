@@ -322,7 +322,33 @@ function NsisDeployImage([string] $scriptName)
     Push-AppveyorArtifact $installerName
 }
 
+
+# based on http://thesurlyadmin.com/2013/01/07/remove-empty-directories-recursively/
+function DeleteEmptyFodlers([string] $root)
+{
+    $Folders = @()
+     foreach($Folder in (Get-ChildItem -Path $root -Recurse -Directory))
+       {  
+            $Folders += New-Object PSObject -Property @{
+                Object = $Folder
+                Depth = ($Folder.FullName.Split("\")).Count
+            }
+      }
+      $Folders = $Folders | Sort Depth -Descending
+ 
+    foreach($Folder in $Folders)
+    {
+       If ($Folder.Object.GetFileSystemInfos().Count -eq 0)
+       {  
+            Write-Host "Delete empty dir:" $Folder.Object.FullName
+            Remove-Item -Path $Folder.Object.FullName -Force
+       }
+    }
+ 
+}
+
+
 Write-Host "CMAKE_INSTALL_ROOT: $CMAKE_INSTALL_ROOT"
 Write-Host "Image-Name: ", (Get-DeployImageName)
 
-Export-ModuleMember -Function @("Init","CmakeImageInstall", "CreateDeployImage", "LogExec", "7ZipDeployImage", "NsisDeployImage") -Variable @("CMAKE_INSTALL_ROOT")
+Export-ModuleMember -Function @("Init","CmakeImageInstall", "CreateDeployImage", "LogExec", "7ZipDeployImage", "NsisDeployImage", "DeleteEmptyFodlers") -Variable @("CMAKE_INSTALL_ROOT")
