@@ -1,3 +1,5 @@
+Write-Host "Appvyeor Helper scrips https://github.com/TheOneRing/appVeyorHelp"
+
 $ErrorActionPreference="Stop"
 
 $script:INSTALL_DIR="$env:APPVEYOR_BUILD_FOLDER\work\install"
@@ -10,7 +12,6 @@ if(!$env:CI -eq "true")
     {
         Write-Host "Push-AppveyorArtifact $ARGS"
     }
-    
     function Start-FileDownload([string] $url, [string] $out)
     {
         if(!$out)
@@ -21,7 +22,6 @@ if(!$env:CI -eq "true")
     }
 }
 
-    
 function LogExec()
 {
     $OldErrorActionPreference=$ErrorActionPreference
@@ -62,23 +62,23 @@ function Get-QtDir()
         $ver = $env:QT_VER
     }
     return "C:\Qt\$ver\$env:COMPILER\"
-} 
+}
 
 function SETUP-QT()
 {
     [string] $compiler=$env:COMPILER
     $qtDir = Get-QtDir
     $script:QT_BINARY_DIRS = @($qtDir)
-    
+
     BAT-CALL  "$qtDir\bin\qtenv2.bat"
-    if ($compiler.StartsWith("mingw"))
+    if ($compiler.StartsWith("mingw49"))
     {
         #remove sh.exe from path
         $env:PATH=$env:PATH -replace "C:\\Program Files \(x86\)\\Git\\bin", ""
         $script:MAKE="mingw32-make"
         $script:CMAKE_GENERATOR="MinGW Makefiles"
         $script:STRIP=@("strip", "-s")
-        $script:QT_BINARY_DIRS += (Resolve-Path "$qtDir\..\..\Tools\$compiler\opt\")
+        $script:QT_BINARY_DIRS += (Resolve-Path "$qtDir\..\..\Tools\mingw492_32\opt\")
     }
     elseif ($compiler.StartsWith("msvc"))
     {
@@ -100,7 +100,7 @@ function SETUP-QT()
         $script:MAKE="nmake"
         $script:CMAKE_GENERATOR="NMake Makefiles"
         if($arch -eq "x86")
-        { 
+        {
             $script:QT_BINARY_DIRS += ("C:\OpenSSL-Win32")
         }
         else
@@ -146,46 +146,59 @@ function Init([string[]] $chocoDeps, [System.Collections.Specialized.OrderedDict
 
     mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\image | Out-Null
     mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\build | Out-Null
-    
+
     SETUP-QT
-    
+
     if($chocoDeps -contains "ninja") {
         $script:CMAKE_GENERATOR="Ninja"
         $script:MAKE="ninja"
     }
-    
+
     if ( !(Test-Path "$env:APPVEYOR_BUILD_FOLDER\work\install" ) )
     {
         mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\install | Out-Null
         mkdir -Force $env:APPVEYOR_BUILD_FOLDER\work\git | Out-Null
-        
+
         foreach($module in $chocoDeps) {
-            if($module -eq "nsis") 
+            if($module -eq "nsis")
             {
                 Install-ChocolatelyModule "nsis.portable" @("-pre")
                 continue
             }
             Install-ChocolatelyModule $module
         }
-        
+
         foreach($key in $cmakeModules.Keys) {
             Install-CmakeGitModule $key $cmakeModules[$key]
         }
-        
+
         [string] $compiler=$env:COMPILER
         if($compiler.StartsWith("msvc"))
         {
             Write-Host "Downloading vcredist.exe"
-            if($compiler.EndsWith("64"))
+            if ($compiler.StartsWith("msvc2015"))
             {
-                Start-FileDownload http://download.microsoft.com/download/2/E/6/2E61CFA4-993B-4DD4-91DA-3737CD5CD6E3/vcredist_x64.exe $env:APPVEYOR_BUILD_FOLDER\work\install\vcredist.exe
+                if($compiler.EndsWith("64"))
+                {
+                    Start-FileDownload https://download.microsoft.com/download/9/3/F/93FCF1E7-E6A4-478B-96E7-D4B285925B00/vc_redist.x64.exe $env:APPVEYOR_BUILD_FOLDER\work\install\vcredist.exe
+                }
+                else
+                {
+                    Start-FileDownload https://download.microsoft.com/download/9/3/F/93FCF1E7-E6A4-478B-96E7-D4B285925B00/vc_redist.x86.exe $env:APPVEYOR_BUILD_FOLDER\work\install\vcredist.exe
+                }
             }
             else
             {
-                Start-FileDownload http://download.microsoft.com/download/2/E/6/2E61CFA4-993B-4DD4-91DA-3737CD5CD6E3/vcredist_x86.exe $env:APPVEYOR_BUILD_FOLDER\work\install\vcredist.exe
-            }        
+                if($compiler.EndsWith("64"))
+                {
+                    Start-FileDownload http://download.microsoft.com/download/2/E/6/2E61CFA4-993B-4DD4-91DA-3737CD5CD6E3/vcredist_x64.exe $env:APPVEYOR_BUILD_FOLDER\work\install\vcredist.exe
+                }
+                else
+                {
+                    Start-FileDownload http://download.microsoft.com/download/2/E/6/2E61CFA4-993B-4DD4-91DA-3737CD5CD6E3/vcredist_x86.exe $env:APPVEYOR_BUILD_FOLDER\work\install\vcredist.exe
+                }
+            }
         }
-
     }
 }
 
@@ -200,7 +213,7 @@ function relativePath([string] $root, [string] $path)
 function StripFile([string] $name)
 {
     if($script:STRIP) {
-        if( $name.EndsWith(".dll") -or $name.EndsWith(".exe")) 
+        if( $name.EndsWith(".dll") -or $name.EndsWith(".exe"))
         {
             Write-Host "strip file $name"
             LogExec @script:STRIP $name
@@ -218,7 +231,6 @@ function Get-DeployImageName()
     }
 }
 
-
 function Get-Version()
 {
     if($env:APPVEYOR_REPO_TAG -eq "true") {
@@ -231,7 +243,7 @@ function Get-Version()
 
 function CmakeImageInstall()
 {
-    $imageName = Get-DeployImageName 
+    $imageName = Get-DeployImageName
     $destDir = "$env:APPVEYOR_BUILD_FOLDER\work\cmakeDeployImage\$imageName"
     $env:DESTDIR = $destDir
     LogExec $script:MAKE install
@@ -252,12 +264,11 @@ function CmakeImageInstall()
     rm -Recurse "$destDir\$rootLeftOver"
 }
 
-
-function CreateDeployImage([string[]] $whiteList, [string[]] $blackList) 
+function CreateDeployImage([string[]] $whiteList, [string[]] $blackList)
 {
     $imageName = Get-DeployImageName
     $deployPath = "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName"
-    
+
     function copyWithWhitelist([string] $root)
     {
         $files = ls $root -Recurse
@@ -270,7 +281,7 @@ function CreateDeployImage([string[]] $whiteList, [string[]] $blackList)
                 {
                     continue
                 }
-                if(!(Test-Path $deployPath\$relPath)) 
+                if(!(Test-Path $deployPath\$relPath))
                 {
                     Write-Host "copy $fileName to $deployPath\$relPath"
                     mkdir -Force (Split-Path -Parent $deployPath\$relPath) | Out-Null
@@ -282,8 +293,7 @@ function CreateDeployImage([string[]] $whiteList, [string[]] $blackList)
     }
     Write-Host "CreateDeployImage $imageName"
     mkdir $deployPath | Out-Null
-    
-    
+
     copyWithWhitelist "$env:APPVEYOR_BUILD_FOLDER\work\cmakeDeployImage\$imageName"
     copyWithWhitelist "$env:APPVEYOR_BUILD_FOLDER\work\install\"
     foreach($folder in $script:QT_BINARY_DIRS)
@@ -291,7 +301,7 @@ function CreateDeployImage([string[]] $whiteList, [string[]] $blackList)
         copyWithWhitelist $folder
     }
     Write-Host "Deploy path $deployPath"
-    return $deployPath 
+    return $deployPath
 }
 
 function 7ZipDeployImage()
@@ -306,7 +316,7 @@ function NsisDeployImage([string] $scriptName)
     $imageName = Get-DeployImageName
     $installerName = "$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName.exe"
     $version = Get-Version
-    if(([string]$env:COMPILER).StartsWith("msvc")) 
+    if(([string]$env:COMPILER).StartsWith("msvc"))
     {
         $redist = "$env:APPVEYOR_BUILD_FOLDER\work\install\vcredist.exe"
     }else{
@@ -318,35 +328,33 @@ function NsisDeployImage([string] $scriptName)
     }else{
         $defaultinstdir = "`$PROGRAMFILES"
     }
-    LogExec makensis.exe /DgitDir=$env:APPVEYOR_BUILD_FOLDER /Dsetupname=$installerName /Dcaption=$imageName /Dversion=$version /Dcompiler=$env:COMPILER /Dvcredist=$redist /Ddefaultinstdir=$defaultinstdir /Dsrcdir=$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName $scriptName 
+    LogExec makensis.exe /DgitDir=$env:APPVEYOR_BUILD_FOLDER /Dsetupname=$installerName /Dcaption=$imageName /Dversion=$version /Dcompiler=$env:COMPILER /Dvcredist=$redist /Ddefaultinstdir=$defaultinstdir /Dsrcdir=$env:APPVEYOR_BUILD_FOLDER\work\deployImage\$imageName $scriptName
     Push-AppveyorArtifact $installerName
 }
-
 
 # based on http://thesurlyadmin.com/2013/01/07/remove-empty-directories-recursively/
 function DeleteEmptyFodlers([string] $root)
 {
     $Folders = @()
     foreach($Folder in (Get-ChildItem -Path $root -Recurse -Directory))
-       {  
+       {
             $Folders += New-Object PSObject -Property @{
                 Object = $Folder
                 Depth = ($Folder.FullName.Split("\")).Count
             }
     }
     $Folders = $Folders | Sort Depth -Descending
- 
+
     foreach($Folder in $Folders)
     {
        If ($Folder.Object.GetFileSystemInfos().Count -eq 0)
-       {  
+       {
             Write-Host "Delete empty dir:" $Folder.Object.FullName
             Remove-Item -Path $Folder.Object.FullName -Force
        }
     }
 
 }
-
 
 Write-Host "CMAKE_INSTALL_ROOT: $CMAKE_INSTALL_ROOT"
 Write-Host "Image-Name: ", (Get-DeployImageName)
