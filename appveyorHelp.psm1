@@ -1,4 +1,4 @@
-Write-Host "Appvyeor Helper scrips https://github.com/TheOneRing/appVeyorHelp"
+Write-Host "Appveyor Helper scrips https://github.com/TheOneRing/appVeyorHelp"
 
 $ErrorActionPreference="Stop"
 
