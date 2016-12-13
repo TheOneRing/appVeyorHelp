@@ -1,5 +1,3 @@
-Write-Host "Appveyor Helper scrips https://github.com/TheOneRing/appVeyorHelp"
-
 $ErrorActionPreference="Stop"
 
 $script:INSTALL_DIR="$env:APPVEYOR_BUILD_FOLDER\work\install"
@@ -71,14 +69,25 @@ function SETUP-QT()
     $script:QT_BINARY_DIRS = @($qtDir)
 
     BAT-CALL  "$qtDir\bin\qtenv2.bat"
-    if ($compiler.StartsWith("mingw49"))
+
+    if ($compiler.StartsWith("mingw"))
     {
+        # supported values are
+        #mingw49_32
+        #mingw53_32
         #remove sh.exe from path
         $env:PATH=$env:PATH -replace "C:\\Program Files \(x86\)\\Git\\bin", ""
         $script:MAKE="mingw32-make"
         $script:CMAKE_GENERATOR="MinGW Makefiles"
         $script:STRIP=@("strip", "-s")
-        $script:QT_BINARY_DIRS += (Resolve-Path "$qtDir\..\..\Tools\mingw492_32\opt\")
+        if ($compiler -eq "mingw49_32")
+        {
+            $script:QT_BINARY_DIRS += (Resolve-Path "$qtDir\..\..\Tools\mingw492_32\opt\")
+        }
+        elseif ($compiler -eq "mingw53_32")
+        {
+            $script:QT_BINARY_DIRS += (Resolve-Path "$qtDir\..\..\Tools\mingw530_32\opt\")
+        }
     }
     elseif ($compiler.StartsWith("msvc"))
     {
@@ -110,10 +119,13 @@ function SETUP-QT()
     }
 }
 
-function Install-ChocolatelyModule([string] $module, [string[]] $myargs)
+function Install-ChocolateyModule([string] $module, [string[]] $myargs)
 {
-    Write-Host "Install chocolately package $module"
-    LogExec cinst $module @myargs -y
+    Write-Host "Install chocolatey package $module"
+    LogExec appveyor-retry cinst $module @myargs -y
+    # Retry installation in case it fails; remove 'appveyor-retry' to run in a generic manner
+    # See http://help.appveyor.com/discussions/suggestions/816-generic-wrapper-for-retry#comment_40579488
+    # And https://github.com/appveyor/ci/issues/418
 }
 
 function Install-CmakeGitModule([string] $url, [hashtable] $arguments)
@@ -162,10 +174,10 @@ function Init([string[]] $chocoDeps, [System.Collections.Specialized.OrderedDict
         foreach($module in $chocoDeps) {
             if($module -eq "nsis")
             {
-                Install-ChocolatelyModule "nsis.portable" @("-pre")
+                Install-ChocolateyModule "nsis.portable" @("-pre")
                 continue
             }
-            Install-ChocolatelyModule $module
+            Install-ChocolateyModule $module
         }
 
         foreach($key in $cmakeModules.Keys) {
